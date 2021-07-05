@@ -113,10 +113,10 @@ func parse(code string) ([]Instruction, error) {
 		case "]":
 			if loops == 0 {
 				parseError = errors.New(fmt.Sprintf("error %v:%v : Illeagal \"]\".", lines, column))
+			} else {
+				loops -= 1
+				bytecode = append(bytecode, LOOP_END)
 			}
-
-			loops -= 1
-			bytecode = append(bytecode, LOOP_END)
 		case "\n":
 			lines += 1
 			column = 0
@@ -124,28 +124,63 @@ func parse(code string) ([]Instruction, error) {
 	}
 
 	if loops != 0 {
-		parseError = errors.New("error: Unclosed \"[\" (LOOP_START)")
+		parseError = errors.New("error: Unclosed \"[\".")
 	}
 
 	return bytecode, parseError
 }
 
-func check(e error) {
+func strictCheck(e error) {
 	if e != nil {
 		fmt.Print(e)
 		os.Exit(0)
 	}
 }
 
+func check(e error) bool {
+	if e != nil {
+		fmt.Println(e)
+		return false
+	}
+
+	return true
+}
+
 func main() {
 	brainfuck := VIRTUAL_MACHINE
 	args := os.Args[1:]
 
-	file, fileError := ioutil.ReadFile(args[0])
-	check(fileError)
+	if len(args) == 0 {
+		fmt.Println("Welcome to brainfuck v1.0.0.")
+		for {
+			fmt.Print("> ")
+			var input string
+			fmt.Scanln(&input)
 
-	instructions, parseError := parse(string(file))
-	check(parseError)
+			if input == "exit" {
+				break
+			} else {
+				instructions, parseError := parse(input)
 
-	brainfuck.run(instructions)
+				if check(parseError) {
+					brainfuck.run(instructions)
+				}
+
+				length := len(instructions)
+				for i := 0; i < length; i++ {
+					if instructions[i] == OUTPUT {
+						fmt.Print("\n")
+					}
+				}
+			}
+		}
+	} else {
+		file, fileError := ioutil.ReadFile(args[0])
+		strictCheck(fileError)
+
+		instructions, parseError := parse(string(file))
+		strictCheck(parseError)
+
+		brainfuck.run(instructions)
+	}
 }
