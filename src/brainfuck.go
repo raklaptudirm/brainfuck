@@ -25,16 +25,24 @@ const (
 )
 
 type VM struct {
-	dataPointer uint64
+	dataPointer uint16
 	memory      [TAPE_LENGTH]byte
 }
 
 func (vm *VM) execute(instruction Instruction) {
 	switch instruction {
 	case GO_LEFT:
-		vm.dataPointer -= 1
+		if vm.dataPointer == 0 {
+			vm.dataPointer = TAPE_LENGTH - 1
+		} else {
+			vm.dataPointer -= 1
+		}
 	case GO_RIGHT:
-		vm.dataPointer += 1
+		if vm.dataPointer == TAPE_LENGTH-1 {
+			vm.dataPointer = 0
+		} else {
+			vm.dataPointer += 1
+		}
 	case INPUT:
 		fmt.Print("input: ")
 		_, _ = fmt.Scanf("%d", &vm.memory[vm.dataPointer])
