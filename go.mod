@@ -1,3 +1,3 @@
-module github.com/brainfuck/src
+module github.com/raklaptudirm/brainfuck
 
 go 1.16
