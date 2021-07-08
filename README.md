@@ -7,7 +7,7 @@ $ git clone C:\Users\USER\Desktop\Mridutpal\Projects\Repositories\Go\brainfuck
 $ cd brainfuck
 $ go build
 ```
-Add the generated executable file to your `PATH`.
+Add the generated executable file to your `$PATH`.
 
 # Usage:
 ### Run a `brainfuck` file:
