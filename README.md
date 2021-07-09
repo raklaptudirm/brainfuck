@@ -3,7 +3,7 @@ A Go-based Brainfuck interpreter and REPL.
 
 # Installation
 ```bash
-$ git clone C:\Users\USER\Desktop\Mridutpal\Projects\Repositories\Go\brainfuck
+$ git clone https://github.com/raklaptudirm/brainfuck.git
 $ cd brainfuck
 $ go build
 ```
