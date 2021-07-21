@@ -7,17 +7,29 @@ import (
 	. "github.com/raklaptudirm/brainfuck/types"
 )
 
-func Parse(code string) ([]Instruction, error) {
+func Parse(code string) ([]Instruction, error, []LoopIndexes) {
 	var parseError error = nil
 
 	bytecode := []Instruction{}
+	indexes := []LoopIndexes{}
+	loops := []LoopIndexes{}
+
 	length := len(code)
-	loops := 0
 	lines := 1
 	column := 0
 
+	last := func(item []LoopIndexes) int {
+		return len(item) - 1
+	}
+
+	elements := func() int {
+		return len(bytecode) - 1
+	}
+
 	for i := 0; i < length; i += 1 {
 		column += 1
+
+		indexes = append(indexes, 0)
 
 		switch string(code[i]) {
 		case "<":
@@ -33,24 +45,33 @@ func Parse(code string) ([]Instruction, error) {
 		case "-":
 			bytecode = append(bytecode, DECREMENT)
 		case "[":
-			loops += 1
 			bytecode = append(bytecode, LOOP_START)
+			loops = append(loops, LoopIndexes(elements()))
 		case "]":
-			if loops == 0 {
+			if len(loops) == 0 {
 				parseError = errors.New(fmt.Sprintf("error %v:%v : Illeagal \"]\".", lines, column))
 			} else {
-				loops -= 1
 				bytecode = append(bytecode, LOOP_END)
+
+				loopStart := loops[last(loops)]
+
+				indexes[loopStart] = LoopIndexes(elements())
+				indexes[elements()] = loopStart
+
+				loops = loops[:last(loops)]
 			}
 		case "\n":
 			lines += 1
 			column = 0
+			indexes = indexes[:last(indexes)]
+		default:
+			indexes = indexes[:last(indexes)]
 		}
 	}
 
-	if loops != 0 {
+	if len(loops) != 0 {
 		parseError = errors.New("error: Unclosed \"[\".")
 	}
 
-	return bytecode, parseError
+	return bytecode, parseError, indexes
 }

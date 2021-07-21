@@ -42,16 +42,17 @@ func main() {
 			if input == "exit" {
 				break
 			} else {
-				instructions, parseError := Parse(input)
+				instructions, parseError, indexes := Parse(input)
 
 				if check(parseError) {
-					brainfuck.Run(instructions)
+					brainfuck.Run(os.Stdout, instructions, indexes)
 				}
 
 				length := len(instructions)
 				for i := 0; i < length; i++ {
 					if instructions[i] == OUTPUT {
 						fmt.Print("\n")
+						break
 					}
 				}
 			}
@@ -60,9 +61,9 @@ func main() {
 		file, fileError := ioutil.ReadFile(args[0])
 		strictCheck(fileError)
 
-		instructions, parseError := Parse(string(file))
+		instructions, parseError, indexes := Parse(string(file))
 		strictCheck(parseError)
 
-		brainfuck.Run(instructions)
+		brainfuck.Run(os.Stdout, instructions, indexes)
 	}
 }

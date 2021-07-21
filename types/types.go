@@ -3,6 +3,7 @@ package types
 const TAPE_LENGTH uint16 = 30000
 
 type Instruction uint8
+type LoopIndexes int
 
 const (
 	GO_LEFT = iota

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	. "io"
 
 	. "github.com/raklaptudirm/brainfuck/types"
 )
@@ -11,7 +12,7 @@ type VM struct {
 	Memory      [TAPE_LENGTH]byte
 }
 
-func (vm *VM) execute(instruction Instruction) {
+func (vm *VM) execute(out Writer, instruction Instruction) {
 	switch instruction {
 	case GO_LEFT:
 		if vm.DataPointer == 0 {
@@ -26,10 +27,9 @@ func (vm *VM) execute(instruction Instruction) {
 			vm.DataPointer += 1
 		}
 	case INPUT:
-		fmt.Print("input: ")
-		_, _ = fmt.Scanf("%d", &vm.Memory[vm.DataPointer])
+		_, _ = fmt.Scanf("%c", &vm.Memory[vm.DataPointer])
 	case OUTPUT:
-		fmt.Print(string(vm.Memory[vm.DataPointer]))
+		fmt.Fprint(out, string(vm.Memory[vm.DataPointer]))
 	case INCREMENT:
 		vm.Memory[vm.DataPointer] += 1
 	case DECREMENT:
@@ -37,37 +37,21 @@ func (vm *VM) execute(instruction Instruction) {
 	}
 }
 
-func (vm *VM) Run(instructions []Instruction) {
+func (vm *VM) Run(out Writer, instructions []Instruction, indexes []LoopIndexes) {
 	length := len(instructions)
 
 	for i := 0; i < length; i += 1 {
 		switch instructions[i] {
 		case LOOP_START:
 			if vm.Memory[vm.DataPointer] == 0 {
-				i += 1
-				for loops := 0; instructions[i] != LOOP_END || loops != 0; i += 1 {
-					switch instructions[i] {
-					case LOOP_START:
-						loops += 1
-					case LOOP_END:
-						loops -= 1
-					}
-				}
+				i = int(indexes[i])
 			}
 		case LOOP_END:
 			if vm.Memory[vm.DataPointer] != 0 {
-				i -= 1
-				for loops := 0; instructions[i] != LOOP_START || loops != 0; i -= 1 {
-					switch instructions[i] {
-					case LOOP_START:
-						loops += 1
-					case LOOP_END:
-						loops -= 1
-					}
-				}
+				i = int(indexes[i])
 			}
 		default:
-			vm.execute(instructions[i])
+			vm.execute(out, instructions[i])
 		}
 	}
 }
