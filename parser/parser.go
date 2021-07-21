@@ -70,7 +70,7 @@ func Parse(code string) ([]Instruction, error, []LoopIndexes) {
 	}
 
 	if len(loops) != 0 {
-		parseError = errors.New("error: Unclosed \"[\".")
+		parseError = errors.New(fmt.Sprintf("error: %v unclosed \"[\".", len(loops)))
 	}
 
 	return bytecode, parseError, indexes
