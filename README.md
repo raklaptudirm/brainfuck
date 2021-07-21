@@ -10,33 +10,27 @@ $ go build
 Add the generated executable file to your `$PATH`.
 
 # Usage:
-### Run a `brainfuck` file:
-```
-$ brainfuck <file_name>
-```
-For example:
-```
-$ brainfuck examples/mandelbrot.bf
-```
-
-### Start the `REPL`:
-```
-$ brainfuck
-```
-# Later API (To be implemented):
 ### Command help:
 ```
+$ brainfuck help <command>
+```
+### Help:
+```
 $ brainfuck
 ```
 ### Start the `REPL`:
 ```
-$ brainfuck repl
+$ brainfuck repl [flags]
 ```
 ### Run a `brainfuck` file:
 ```
-$ brainfuck run <file_name>
+$ brainfuck run <file_name> [flags]
 ```
-### Transpile a `brainfuck` file:
+### Test a `brainfuck` file:
+```
+$ brainfuck test <file_name> [flags]
+```
+### Transpile a `brainfuck` file: `Not implemented`
 ```
 $ brainfuck transpile <file_name> <language_name>
 ```
