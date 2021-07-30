@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 
-	. "github.com/raklaptudirm/brainfuck/types"
+	. "github.com/raklaptudirm/brainfuck/parser/types"
+	. "github.com/raklaptudirm/brainfuck/errors/types"
 )
 
-func Parse(code string) ([]Instruction, error, []LoopIndexes) {
+func Parse(code string) ([]Instruction, error, []LoopIndexes, ErrorCode) {
 	var parseError error = nil
+	var errorCode ErrorCode = NO_ERROR
 
 	bytecode := []Instruction{}
 	indexes := []LoopIndexes{}
@@ -50,6 +52,7 @@ func Parse(code string) ([]Instruction, error, []LoopIndexes) {
 		case "]":
 			if len(loops) == 0 {
 				parseError = errors.New(fmt.Sprintf("error %v:%v : Illeagal \"]\".", lines, column))
+				errorCode = LOOP_UNOPNED
 			} else {
 				bytecode = append(bytecode, LOOP_END)
 
@@ -71,7 +74,8 @@ func Parse(code string) ([]Instruction, error, []LoopIndexes) {
 
 	if len(loops) != 0 {
 		parseError = errors.New(fmt.Sprintf("error: %v unclosed \"[\".", len(loops)))
+		errorCode = LOOP_UNCLOSED
 	}
 
-	return bytecode, parseError, indexes
+	return bytecode, parseError, indexes, errorCode
 }

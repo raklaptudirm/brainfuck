@@ -3,14 +3,20 @@ package vm
 import (
 	"fmt"
 	. "io"
+	"io/ioutil"
 
-	. "github.com/raklaptudirm/brainfuck/types"
+	. "github.com/raklaptudirm/brainfuck/errors"
+	. "github.com/raklaptudirm/brainfuck/parser"
+	. "github.com/raklaptudirm/brainfuck/parser/types"
+	. "github.com/raklaptudirm/brainfuck/vm/types"
 )
 
 type VM struct {
 	DataPointer uint16
 	Memory      [TAPE_LENGTH]byte
 }
+
+var VMBase VM = VM{DataPointer: 0, Memory: [TAPE_LENGTH]byte{}}
 
 func (vm *VM) execute(out Writer, instruction Instruction) {
 	switch instruction {
@@ -37,7 +43,7 @@ func (vm *VM) execute(out Writer, instruction Instruction) {
 	}
 }
 
-func (vm *VM) Run(out Writer, instructions []Instruction, indexes []LoopIndexes) {
+func (vm *VM) RunCode(out Writer, instructions []Instruction, indexes []LoopIndexes) {
 	length := len(instructions)
 
 	for i := 0; i < length; i += 1 {
@@ -54,4 +60,18 @@ func (vm *VM) Run(out Writer, instructions []Instruction, indexes []LoopIndexes)
 			vm.execute(out, instructions[i])
 		}
 	}
+}
+
+func (vm *VM) RunString(str string, out Writer) {
+	instructions, parseError, indexes, _ := Parse(str)
+	StrictCheck(parseError)
+
+	vm.RunCode(out, instructions, indexes)
+}
+
+func (vm *VM) RunFile(fileName string, out Writer) {
+	file, fileError := ioutil.ReadFile(fileName)
+	StrictCheck(fileError)
+
+	vm.RunString(string(file), out)
 }
