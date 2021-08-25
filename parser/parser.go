@@ -1,13 +1,19 @@
+/*
+Package parser provides parsing functions for a brainfuck source.
+*/
 package parser
 
 import (
 	"errors"
 	"fmt"
 
-	. "github.com/raklaptudirm/brainfuck/parser/types"
 	. "github.com/raklaptudirm/brainfuck/errors/types"
+	. "github.com/raklaptudirm/brainfuck/parser/types"
 )
 
+// Parse parses the given brainfuck source,
+// and returns the instruction codes, loop indexes,
+//and errors(if any) found in the source string.
 func Parse(code string) ([]Instruction, error, []LoopIndexes, ErrorCode) {
 	var parseError error = nil
 	var errorCode ErrorCode = NO_ERROR
@@ -48,6 +54,11 @@ func Parse(code string) ([]Instruction, error, []LoopIndexes, ErrorCode) {
 			bytecode = append(bytecode, DECREMENT)
 		case "[":
 			bytecode = append(bytecode, LOOP_START)
+
+			// The loops start's index is the number of elements in bytecode - 1
+			// since the command has already been pushed into the array.
+			// The index is converted to parser/types.LoopIndexes,
+			// and appended to the loops array.
 			loops = append(loops, LoopIndexes(elements()))
 		case "]":
 			if len(loops) == 0 {
@@ -56,8 +67,12 @@ func Parse(code string) ([]Instruction, error, []LoopIndexes, ErrorCode) {
 			} else {
 				bytecode = append(bytecode, LOOP_END)
 
+				// The index of the starting brace of this loop,
+				// will be the last element of loops
 				loopStart := loops[last(loops)]
 
+				// Switch the indexes of the starting and ending brace,
+				// and add them to indexes.
 				indexes[loopStart] = LoopIndexes(elements())
 				indexes[elements()] = loopStart
 

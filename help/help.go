@@ -1,11 +1,18 @@
+/*
+Package help provides help string for all commands.
+*/
 package help
 
 import (
 	"fmt"
 )
 
+// Default is the the default help string,
+// when no command name is provided.
 const Default string = "Usage: brainfuck <command> [flags]\n\nThe commands are:\n  run      run a  brainfuck file\n  test     test a brainfuck file\n  repl     start the brainfuck repl\n\nUse \"brainfuck help <command>\" for more information about a command."
 
+// Get returns the help string for the given command,
+// and prints an error if it does not exist.
 func Get(query string) {
 	switch query {
 	case "run":

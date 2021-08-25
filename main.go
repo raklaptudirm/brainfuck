@@ -4,7 +4,7 @@
 *
 * Copyright (c) 2021 Rak Laptudirm
 * Licensed under the MIT license.
-*/
+ */
 
 package main
 
@@ -15,25 +15,28 @@ import (
 
 	"github.com/raklaptudirm/brainfuck/help"
 
-	. "github.com/raklaptudirm/brainfuck/vm"
 	. "github.com/raklaptudirm/brainfuck/errors"
 	. "github.com/raklaptudirm/brainfuck/parser"
+	. "github.com/raklaptudirm/brainfuck/vm"
 )
 
 func main() {
 	brainfuck := VMBase
 	args := os.Args[1:]
 
-	assert := func (length int) {
-  	if len(args) != length + 1 {
-  		fmt.Printf("Expected %v arg(s), received %v.", length, len(args) - 1)
-  		os.Exit(0)
-  	}
-  }
+	// assert function to check wether the expected number
+	// of arguments was received or not.
+	assert := func(length int) {
+		if len(args) != length+1 {
+			fmt.Printf("Expected %v arg(s), received %v.", length, len(args)-1)
+			os.Exit(0)
+		}
+	}
 
 	if len(args) == 0 {
 		fmt.Println(help.Default)
 	} else {
+		// args[0] contains the command name.
 		switch args[0] {
 		case "run":
 			assert(1)
