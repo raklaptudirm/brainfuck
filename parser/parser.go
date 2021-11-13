@@ -1,6 +1,13 @@
-/*
-Package parser provides parsing functions for a brainfuck source.
-*/
+// brainfuck
+// https://github.com/raklaptudirm/brainfuck
+// Copyright (c) 2021 Rak Laptudirm.
+// Licensed under the MIT license.
+
+// Package parser provides parsing functions for a brainfuck source.
+//
+// The provided method and types is used for parsing a brainfuck source
+// string into an Instruction slice.
+//
 package parser
 
 import (
@@ -8,13 +15,36 @@ import (
 	"fmt"
 
 	. "github.com/raklaptudirm/brainfuck/errors/types"
-	. "github.com/raklaptudirm/brainfuck/parser/types"
 )
+
+// Instruction type represents a single brainfuck instuction
+type Instruction uint8
+
+// LoopIndexes type represents the index of a loop,
+// utilized to improve runtime speeds.
+type LoopIndexes int
+
+// Instructions representing brainfuck commands.
+const (
+	GO_LEFT Instruction = iota
+	GO_RIGHT
+	INCREMENT
+	DECREMENT
+	INPUT
+	OUTPUT
+	LOOP_START
+	LOOP_END
+)
+
+type Bytecode struct {
+	Instructions []Instruction
+	Indexes []LoopIndexes
+}
 
 // Parse parses the given brainfuck source,
 // and returns the instruction codes, loop indexes,
 //and errors(if any) found in the source string.
-func Parse(code string) ([]Instruction, error, []LoopIndexes, ErrorCode) {
+func Parse(code string) (Bytecode, error, ErrorCode) {
 	var parseError error = nil
 	var errorCode ErrorCode = NO_ERROR
 
@@ -92,5 +122,7 @@ func Parse(code string) ([]Instruction, error, []LoopIndexes, ErrorCode) {
 		errorCode = LOOP_UNCLOSED
 	}
 
-	return bytecode, parseError, indexes, errorCode
+	ret := Bytecode{Instructions: bytecode, Indexes: indexes}
+
+	return ret, parseError, errorCode
 }

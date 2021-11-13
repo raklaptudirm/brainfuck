@@ -1,11 +1,33 @@
-/*
-* brainfuck
-* https://github.com/raklaptudirm/brainfuck
-*
-* Copyright (c) 2021 Rak Laptudirm
-* Licensed under the MIT license.
- */
+// brainfuck
+// https://github.com/raklaptudirm/brainfuck
+// Copyright (c) 2021 Rak Laptudirm.
+// Licensed under the MIT license.
 
+// Brainfuck is a cli compiler and repl
+// for the brainfuck language.
+//
+// Usage:
+//
+//      brainfuck <command> [flags]
+//
+//      The commands are:
+//        run      run a  brainfuck file
+//        test     test a brainfuck file
+//        repl     start the brainfuck repl
+//
+// Example:
+//
+// Run a simple hello world program from
+// the examples directory.
+//
+//      $ brainfuck run examples/hello_world.bf
+//      Hello World!
+//
+// Test a brainfuck file for parse errors.
+//
+//      $ brainfuck test examples/hello_world.bf
+//      examples/hello_world.bf: No errors found.
+//
 package main
 
 import (
@@ -15,13 +37,13 @@ import (
 
 	"github.com/raklaptudirm/brainfuck/help"
 
-	. "github.com/raklaptudirm/brainfuck/errors"
-	. "github.com/raklaptudirm/brainfuck/parser"
-	. "github.com/raklaptudirm/brainfuck/vm"
+	"github.com/raklaptudirm/brainfuck/errors"
+	"github.com/raklaptudirm/brainfuck/parser"
+	"github.com/raklaptudirm/brainfuck/vm"
 )
 
 func main() {
-	brainfuck := VMBase
+	brainfuck := vm.Default
 	args := os.Args[1:]
 
 	// assert function to check wether the expected number
@@ -49,10 +71,10 @@ func main() {
 		case "test":
 			assert(1)
 			file, fileError := ioutil.ReadFile(args[1])
-			StrictCheck(fileError)
+			errors.StrictCheck(fileError)
 
-			_, parseError, _, _ := Parse(string(file))
-			StrictCheck(parseError)
+			_, parseError, _ := parser.Parse(string(file))
+			errors.StrictCheck(parseError)
 
 			fmt.Printf("%v: No errors found.", args[1])
 		default:
