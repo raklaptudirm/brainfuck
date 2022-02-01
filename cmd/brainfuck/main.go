@@ -35,11 +35,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/raklaptudirm/brainfuck/help"
+	"github.com/raklaptudirm/brainfuck/pkg/help"
 
-	"github.com/raklaptudirm/brainfuck/errors"
-	"github.com/raklaptudirm/brainfuck/parser"
-	"github.com/raklaptudirm/brainfuck/vm"
+	"github.com/raklaptudirm/brainfuck/pkg/errors"
+	"github.com/raklaptudirm/brainfuck/pkg/parser"
+	"github.com/raklaptudirm/brainfuck/pkg/vm"
 )
 
 func main() {

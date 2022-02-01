@@ -14,7 +14,7 @@ import (
 	"errors"
 	"fmt"
 
-	. "github.com/raklaptudirm/brainfuck/errors/types"
+	. "github.com/raklaptudirm/brainfuck/pkg/errors/types"
 )
 
 // Instruction type represents a single brainfuck instuction
@@ -38,7 +38,7 @@ const (
 
 type Bytecode struct {
 	Instructions []Instruction
-	Indexes []LoopIndexes
+	Indexes      []LoopIndexes
 }
 
 // Parse parses the given brainfuck source,

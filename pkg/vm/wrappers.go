@@ -3,8 +3,9 @@ package vm
 import (
 	"io"
 	"io/ioutil"
-	"github.com/raklaptudirm/brainfuck/errors"
-	"github.com/raklaptudirm/brainfuck/parser"
+
+	"github.com/raklaptudirm/brainfuck/pkg/errors"
+	"github.com/raklaptudirm/brainfuck/pkg/parser"
 )
 
 // RunString runs a given brainfuck source string,

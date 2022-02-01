@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"io"
 
-  "github.com/raklaptudirm/brainfuck/parser"
-	. "github.com/raklaptudirm/brainfuck/vm/types"
+	"github.com/raklaptudirm/brainfuck/pkg/parser"
+	. "github.com/raklaptudirm/brainfuck/pkg/vm/types"
 )
 
 // VM struct to store memory information during runtime.
