@@ -41,33 +41,24 @@ func (l *Lexer) Init(src string, handler ErrorHandler) {
 func (l *Lexer) Next() (pos token.Position, tok token.Token, lit string) {
 	pos = l.pos
 
-	switch l.peek() {
+	switch l.consume(); l.ch {
 	case eof:
-		l.consume()
 		tok = token.EOF
 	case '+':
-		l.consume()
 		tok = token.INC_VAL
 	case '-':
-		l.consume()
 		tok = token.DEC_VAL
 	case '>':
-		l.consume()
 		tok = token.INC_PTR
 	case '<':
-		l.consume()
 		tok = token.DEC_PTR
 	case ',':
-		l.consume()
 		tok = token.INPUT
 	case '.':
-		l.consume()
 		tok = token.PRINT
 	case '[':
-		l.consume()
 		tok = token.SLOOP
 	case ']':
-		l.consume()
 		tok = token.ELOOP
 	default:
 		tok = l.lexComment()
@@ -98,18 +89,19 @@ func (l *Lexer) consume() {
 		goto advance
 	}
 
-	if r >= utf8.RuneSelf {
-		r, w = utf8.DecodeRuneInString(l.src[l.rdOffset:])
+	if r < utf8.RuneSelf {
+		goto advance
+	}
 
-		if r == utf8.RuneError && w == 1 {
-			l.error("illegal UTF-8 encoding")
-			goto advance
-		}
+	r, w = utf8.DecodeRuneInString(l.src[l.rdOffset:])
 
-		if r == bom && l.offset > 0 {
-			l.error("illegal byte order mark")
-			goto advance
-		}
+	if r == utf8.RuneError && w == 1 {
+		l.error("illegal UTF-8 encoding")
+		goto advance
+	}
+
+	if r == bom && l.offset > 0 {
+		l.error("illegal byte order mark")
 	}
 
 advance:
