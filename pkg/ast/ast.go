@@ -11,7 +11,12 @@ type Program struct {
 }
 
 func (p *Program) TokenLiteral() string {
-	return "program"
+	s := ""
+	for _, op := range p.Operations {
+		s += op.TokenLiteral()
+	}
+
+	return s
 }
 
 type Operation interface {
@@ -44,7 +49,12 @@ type Loop struct {
 }
 
 func (l *Loop) TokenLiteral() string {
-	return "loop"
+	s := "["
+	for _, op := range l.Operators {
+		s += op.TokenLiteral()
+	}
+
+	return s + "]"
 }
 
 func (l *Loop) operationNode() {}
