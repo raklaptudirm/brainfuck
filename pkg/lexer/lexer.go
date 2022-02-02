@@ -1,14 +1,17 @@
 package lexer
 
 import (
+	"fmt"
 	"unicode/utf8"
 
 	"github.com/raklaptudirm/brainfuck/pkg/token"
 )
 
-type lexer struct {
+type Lexer struct {
 	src string
 	ch  rune
+
+	err ErrorHandler
 
 	offset   int
 	rdOffset int
@@ -17,9 +20,23 @@ type lexer struct {
 	col  int
 }
 
-const eof = 0
+const (
+	eof = -1     // end of file
+	bom = 0xFEFF // byte order mark
+)
 
-func (l *lexer) Next() (pos int, tok token.Token, lit string) {
+func (l *Lexer) Init(src string, handler ErrorHandler) {
+	l.src = src
+	l.err = handler
+
+	l.offset = 0
+	l.rdOffset = 0
+
+	l.line = 0
+	l.col = 0
+}
+
+func (l *Lexer) Next() (pos int, tok token.Token, lit string) {
 	switch l.peek() {
 	case eof:
 		l.consume()
@@ -59,7 +76,7 @@ func (l *lexer) Next() (pos int, tok token.Token, lit string) {
 	return
 }
 
-func (l *lexer) lexComment() token.Token {
+func (l *Lexer) lexComment() token.Token {
 	for ch := l.peek(); !isOperator(ch) && !l.atEnd(); ch = l.peek() {
 		l.consume()
 	}
@@ -67,7 +84,7 @@ func (l *lexer) lexComment() token.Token {
 	return token.COMMENT
 }
 
-func (l *lexer) consume() {
+func (l *Lexer) consume() {
 	if l.ch == '\n' {
 		l.line++
 		l.col = 0
@@ -79,42 +96,59 @@ func (l *lexer) consume() {
 	}
 
 	r, w := rune(l.src[l.rdOffset]), 1
-	if r >= utf8.RuneSelf {
-		r, w = utf8.DecodeRuneInString(l.src[l.rdOffset:])
+	if r == 0 {
+		l.error("illegal character NUL")
+		goto advance
 	}
 
+	if r >= utf8.RuneSelf {
+		r, w = utf8.DecodeRuneInString(l.src[l.rdOffset:])
+
+		if r == utf8.RuneError && w == 1 {
+			l.error("illegal UTF-8 encoding")
+			goto advance
+		}
+
+		if r == bom && l.offset > 0 {
+			l.error("illegal byte order mark")
+			goto advance
+		}
+	}
+
+advance:
 	l.ch = r
 
 	l.rdOffset += w
 	l.col += w
 }
 
-func (l *lexer) peek() byte {
+func (l *Lexer) error(err string) {
+	if l.err != nil {
+		l.err(l.line, l.col, err)
+	}
+}
+
+func (l *Lexer) errorf(format string, a ...interface{}) {
+	err := fmt.Sprintf(format, a...)
+	l.error(err)
+}
+
+func (l *Lexer) peek() rune {
 	if l.atEnd() {
 		return eof
 	}
 
-	return l.src[l.rdOffset]
+	return rune(l.src[l.rdOffset])
 }
 
-func (l *lexer) atEnd() bool {
+func (l *Lexer) atEnd() bool {
 	return l.rdOffset >= len(l.src)
 }
 
-func New(s string) *lexer {
-	return &lexer{
-		src: s,
+type ErrorHandler func(int, int, string)
 
-		offset:   0,
-		rdOffset: 0,
-
-		line: 0,
-		col:  0,
-	}
-}
-
-func isOperator(b byte) bool {
-	switch b {
+func isOperator(r rune) bool {
+	switch r {
 	case '+', '-', '>', '<', '[', ']', ',', '.':
 		return true
 	default:
