@@ -16,6 +16,8 @@ type Lexer struct {
 	rdOffset int
 
 	pos token.Position
+
+	ErrorCount int
 }
 
 const (
@@ -122,6 +124,7 @@ advance:
 }
 
 func (l *Lexer) error(err string) {
+	l.ErrorCount++
 	if l.err != nil {
 		l.err(l.pos, err)
 	}
