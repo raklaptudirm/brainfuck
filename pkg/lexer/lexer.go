@@ -1,7 +1,6 @@
 package lexer
 
 import (
-	"fmt"
 	"unicode/utf8"
 
 	"github.com/raklaptudirm/brainfuck/pkg/token"
@@ -126,11 +125,6 @@ func (l *Lexer) error(err string) {
 	if l.err != nil {
 		l.err(l.pos, err)
 	}
-}
-
-func (l *Lexer) errorf(format string, a ...interface{}) {
-	err := fmt.Sprintf(format, a...)
-	l.error(err)
 }
 
 func (l *Lexer) peek() rune {
