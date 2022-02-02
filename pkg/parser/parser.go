@@ -1,128 +1,76 @@
-// brainfuck
-// https://github.com/raklaptudirm/brainfuck
-// Copyright (c) 2021 Rak Laptudirm.
-// Licensed under the MIT license.
-
-// Package parser provides parsing functions for a brainfuck source.
-//
-// The provided method and types is used for parsing a brainfuck source
-// string into an Instruction slice.
-//
 package parser
 
 import (
-	"errors"
-	"fmt"
-
-	. "github.com/raklaptudirm/brainfuck/pkg/errors/types"
+	"github.com/raklaptudirm/brainfuck/pkg/ast"
+	"github.com/raklaptudirm/brainfuck/pkg/lexer"
+	"github.com/raklaptudirm/brainfuck/pkg/token"
 )
 
-// Instruction type represents a single brainfuck instuction
-type Instruction uint8
+type Parser struct {
+	l *lexer.Lexer
 
-// LoopIndexes type represents the index of a loop,
-// utilized to improve runtime speeds.
-type LoopIndexes int
+	err lexer.ErrorHandler
 
-// Instructions representing brainfuck commands.
-const (
-	GO_LEFT Instruction = iota
-	GO_RIGHT
-	INCREMENT
-	DECREMENT
-	INPUT
-	OUTPUT
-	LOOP_START
-	LOOP_END
-)
+	tok token.Token
+	pos token.Position
+	lit string
 
-type Bytecode struct {
-	Instructions []Instruction
-	Indexes      []LoopIndexes
+	ErrorCount int
 }
 
-// Parse parses the given brainfuck source,
-// and returns the instruction codes, loop indexes,
-//and errors(if any) found in the source string.
-func Parse(code string) (Bytecode, error, ErrorCode) {
-	var parseError error = nil
-	var errorCode ErrorCode = NO_ERROR
+func (p *Parser) Init(l *lexer.Lexer, err lexer.ErrorHandler) {
+	p.l = l
+	p.err = err
+}
 
-	bytecode := []Instruction{}
-	indexes := []LoopIndexes{}
-	loops := []LoopIndexes{}
+func (p *Parser) ParseProgram() *ast.Program {
+	program := &ast.Program{}
 
-	length := len(code)
-	lines := 1
-	column := 0
-
-	last := func(item []LoopIndexes) int {
-		return len(item) - 1
+	for p.next(); p.tok != token.EOF; p.next() {
+		op := p.parseOperation()
+		program.Operations = append(program.Operations, op)
 	}
 
-	elements := func() int {
-		return len(bytecode) - 1
+	return program
+}
+
+func (p *Parser) parseOperation() ast.Operation {
+	switch p.tok {
+	case token.COMMENT:
+		return &ast.Comment{Literal: p.lit}
+	case token.SLOOP:
+		return p.parseLoop()
+	case token.ELOOP:
+		p.error(p.pos, "unexpected ]")
+		return nil
+	default:
+		return &ast.Operator{Token: p.tok}
+	}
+}
+
+func (p *Parser) parseLoop() *ast.Loop {
+	loop := &ast.Loop{}
+	pos := p.pos
+
+	for p.next(); p.tok != token.ELOOP && p.tok != token.EOF; p.next() {
+		op := p.parseOperation()
+		loop.Operators = append(loop.Operators, op)
 	}
 
-	for i := 0; i < length; i += 1 {
-		column += 1
-
-		indexes = append(indexes, 0)
-
-		switch string(code[i]) {
-		case "<":
-			bytecode = append(bytecode, GO_LEFT)
-		case ">":
-			bytecode = append(bytecode, GO_RIGHT)
-		case ".":
-			bytecode = append(bytecode, OUTPUT)
-		case ",":
-			bytecode = append(bytecode, INPUT)
-		case "+":
-			bytecode = append(bytecode, INCREMENT)
-		case "-":
-			bytecode = append(bytecode, DECREMENT)
-		case "[":
-			bytecode = append(bytecode, LOOP_START)
-
-			// The loops start's index is the number of elements in bytecode - 1
-			// since the command has already been pushed into the array.
-			// The index is converted to parser/types.LoopIndexes,
-			// and appended to the loops array.
-			loops = append(loops, LoopIndexes(elements()))
-		case "]":
-			if len(loops) == 0 {
-				parseError = errors.New(fmt.Sprintf("error %v:%v : Illeagal \"]\".", lines, column))
-				errorCode = LOOP_UNOPNED
-			} else {
-				bytecode = append(bytecode, LOOP_END)
-
-				// The index of the starting brace of this loop,
-				// will be the last element of loops
-				loopStart := loops[last(loops)]
-
-				// Switch the indexes of the starting and ending brace,
-				// and add them to indexes.
-				indexes[loopStart] = LoopIndexes(elements())
-				indexes[elements()] = loopStart
-
-				loops = loops[:last(loops)]
-			}
-		case "\n":
-			lines += 1
-			column = 0
-			indexes = indexes[:last(indexes)]
-		default:
-			indexes = indexes[:last(indexes)]
-		}
+	if p.tok == token.EOF {
+		p.error(pos, `unexpected EOF, expected ]`)
 	}
 
-	if len(loops) != 0 {
-		parseError = errors.New(fmt.Sprintf("error: %v unclosed \"[\".", len(loops)))
-		errorCode = LOOP_UNCLOSED
+	return loop
+}
+
+func (p *Parser) error(pos token.Position, err string) {
+	p.ErrorCount++
+	if p.err != nil {
+		p.err(pos, err)
 	}
+}
 
-	ret := Bytecode{Instructions: bytecode, Indexes: indexes}
-
-	return ret, parseError, errorCode
+func (p *Parser) next() {
+	p.pos, p.tok, p.lit = p.l.Next()
 }

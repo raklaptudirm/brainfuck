@@ -1,7 +1,21 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-test*
-build/
-*.diff
+# Test binary, built with `go test -c`
+*.test
 
-# Under development:
-repl/
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Ignore binary directory
+bin/
