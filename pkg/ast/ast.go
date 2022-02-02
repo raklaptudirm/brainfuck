@@ -19,10 +19,22 @@ type Operation interface {
 	operationNode()
 }
 
-type Operator token.Token
+type Comment struct {
+	Literal string
+}
+
+func (c *Comment) TokenLiteral() string {
+	return c.Literal
+}
+
+func (c *Comment) operationNode() {}
+
+type Operator struct {
+	Token token.Token
+}
 
 func (o *Operator) TokenLiteral() string {
-	return token.Token(*o).String()
+	return o.Token.String()
 }
 
 func (o *Operator) operationNode() {}
