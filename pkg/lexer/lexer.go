@@ -16,8 +16,7 @@ type Lexer struct {
 	offset   int
 	rdOffset int
 
-	line int
-	col  int
+	pos token.Position
 }
 
 const (
@@ -32,11 +31,15 @@ func (l *Lexer) Init(src string, handler ErrorHandler) {
 	l.offset = 0
 	l.rdOffset = 0
 
-	l.line = 0
-	l.col = 0
+	l.pos = token.Position{
+		Line: 1,
+		Col:  1,
+	}
 }
 
-func (l *Lexer) Next() (pos int, tok token.Token, lit string) {
+func (l *Lexer) Next() (pos token.Position, tok token.Token, lit string) {
+	pos = l.pos
+
 	switch l.peek() {
 	case eof:
 		l.consume()
@@ -69,9 +72,7 @@ func (l *Lexer) Next() (pos int, tok token.Token, lit string) {
 		tok = l.lexComment()
 	}
 
-	pos = l.offset
 	lit = l.src[l.offset:l.rdOffset]
-
 	l.offset = l.rdOffset
 	return
 }
@@ -85,11 +86,6 @@ func (l *Lexer) lexComment() token.Token {
 }
 
 func (l *Lexer) consume() {
-	if l.ch == '\n' {
-		l.line++
-		l.col = 0
-	}
-
 	if l.atEnd() {
 		l.ch = eof
 		return
@@ -119,12 +115,16 @@ advance:
 	l.ch = r
 
 	l.rdOffset += w
-	l.col += w
+	l.pos.Col += w
+
+	if r == '\n' {
+		l.pos.NextLine()
+	}
 }
 
 func (l *Lexer) error(err string) {
 	if l.err != nil {
-		l.err(l.line, l.col, err)
+		l.err(l.pos, err)
 	}
 }
 
@@ -145,7 +145,7 @@ func (l *Lexer) atEnd() bool {
 	return l.rdOffset >= len(l.src)
 }
 
-type ErrorHandler func(int, int, string)
+type ErrorHandler func(token.Position, string)
 
 func isOperator(r rune) bool {
 	switch r {
