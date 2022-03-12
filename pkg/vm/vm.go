@@ -91,7 +91,7 @@ func (m *Machine) executeOperator(o *ast.Operator) error {
 	case token.PRINT:
 		fmt.Print(string(m.Memory[m.Pointer]))
 	default:
-		return ErrAst
+		return fmt.Errorf("invalid operator %s", o.Token)
 	}
 
 	return nil
