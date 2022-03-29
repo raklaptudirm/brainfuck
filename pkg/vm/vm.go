@@ -17,8 +17,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/raklaptudirm/brainfuck/pkg/ast"
-	"github.com/raklaptudirm/brainfuck/pkg/token"
+	"laptudirm.com/x/brainfuck/pkg/ast"
+	"laptudirm.com/x/brainfuck/pkg/token"
 )
 
 type Machine struct {

@@ -14,9 +14,9 @@
 package parser
 
 import (
-	"github.com/raklaptudirm/brainfuck/pkg/ast"
-	"github.com/raklaptudirm/brainfuck/pkg/lexer"
-	"github.com/raklaptudirm/brainfuck/pkg/token"
+	"laptudirm.com/x/brainfuck/pkg/ast"
+	"laptudirm.com/x/brainfuck/pkg/lexer"
+	"laptudirm.com/x/brainfuck/pkg/token"
 )
 
 type Parser struct {

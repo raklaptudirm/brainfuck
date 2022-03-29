@@ -13,7 +13,7 @@
 
 package ast
 
-import "github.com/raklaptudirm/brainfuck/pkg/token"
+import "laptudirm.com/x/brainfuck/pkg/token"
 
 type Node interface {
 	TokenLiteral() string

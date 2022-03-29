@@ -16,7 +16,7 @@ package lexer
 import (
 	"unicode/utf8"
 
-	"github.com/raklaptudirm/brainfuck/pkg/token"
+	"laptudirm.com/x/brainfuck/pkg/token"
 )
 
 type Lexer struct {
