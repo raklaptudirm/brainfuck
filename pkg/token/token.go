@@ -29,7 +29,7 @@ type Token struct {
 type Type int
 
 const (
-	Eof = iota
+	Eof Type = iota
 
 	Plus  // +
 	Minus // -
