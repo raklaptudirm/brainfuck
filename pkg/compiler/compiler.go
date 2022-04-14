@@ -81,11 +81,11 @@ func (c *compiler) loop(l *ast.Loop) error {
 	end := c.chunk.Length()               // end offset
 	c.chunk.WriteUint16(0xFFFF)           // write placeholder
 
-	diff := end - start // difference between offsets
+	diff := uint16(end - start) // difference between offsets
 
 	// backpatch offsets
-	c.chunk.WriteUint16At(start, uint16(diff+1))
-	c.chunk.WriteUint16At(end, uint16(diff-1))
+	c.chunk.WriteUint16At(start, diff)
+	c.chunk.WriteUint16At(end, diff)
 
 	return nil
 }
@@ -98,9 +98,9 @@ func (c *compiler) operator(p *ast.Operator) error {
 	case token.Minus:
 		c.chunk.Write(bytecode.DecreaseValue)
 	case token.LeftArrow:
-		c.chunk.Write(bytecode.IncreasePointer)
-	case token.RightArrow:
 		c.chunk.Write(bytecode.DecreasePointer)
+	case token.RightArrow:
+		c.chunk.Write(bytecode.IncreasePointer)
 	case token.Comma:
 		c.chunk.Write(bytecode.InputByte)
 	case token.Period:
