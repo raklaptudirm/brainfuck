@@ -21,11 +21,11 @@ import "laptudirm.com/x/brainfuck/pkg/token"
 // Lex lexes brainfuck code into a stream of tokens concurrently which are
 // sent into the tokens channel. It does not verify whether the code is
 // valid brainfuck.
-func Lex(data []byte) Tokens {
+func Lex(data []byte) <-chan token.Token {
 	l := lexer{
 		data:   data,
 		pos:    token.Position{Line: 1, Column: 1},
-		tokens: make(Tokens),
+		tokens: make(chan token.Token),
 	}
 
 	// start concurrent tokenization
@@ -38,18 +38,14 @@ type lexer struct {
 	data []byte // source data
 
 	// state
-	offset int            // current offset within data
-	curr   rune           // current rune
-	pos    token.Position // current position
-	tokens Tokens         // tokens channel
+	offset int              // current offset within data
+	curr   rune             // current rune
+	pos    token.Position   // current position
+	tokens chan token.Token // tokens channel
 }
 
 // eof is a constant representing the end of file.
 const eof = -1
-
-// Tokens represents a token channel into which the lexer is sending the
-// tokens.
-type Tokens chan token.Token
 
 // program lexes a brainfuck program from the data in the lexer.
 func (l *lexer) program() {

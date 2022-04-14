@@ -19,21 +19,20 @@ import (
 	"fmt"
 
 	"laptudirm.com/x/brainfuck/pkg/ast"
-	"laptudirm.com/x/brainfuck/pkg/lexer"
 	"laptudirm.com/x/brainfuck/pkg/token"
 )
 
 // Parse parses a brainfuck token stream into an abstract syntax tree.
-func Parse(tokens lexer.Tokens) (*ast.Program, error) {
+func Parse(tokens <-chan token.Token) (*ast.Program, error) {
 	p := parser{tokens: tokens}
 	return p.program()
 }
 
 // parser is a state machine which represents the current parsing state.
 type parser struct {
-	tokens  lexer.Tokens // token stream
-	current token.Token  // current token
-	tokType token.Type   // type of current
+	tokens  <-chan token.Token // token stream
+	current token.Token        // current token
+	tokType token.Type         // type of current
 }
 
 // SyntaxError represents a brainfuck syntax error at a particular token.
