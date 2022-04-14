@@ -29,6 +29,9 @@ type Program struct {
 
 func (p *Program) Node() {}
 
+// verify interface compliance
+var _ Node = (*Program)(nil)
+
 // Operation is the interface implemented by all brainfuck operation ast
 // nodes.
 type Operation interface {
@@ -44,8 +47,16 @@ type Loop struct {
 func (l *Loop) Node()      {}
 func (l *Loop) Operation() {}
 
+// verify interface compliance
+var _ Node = (*Loop)(nil)
+var _ Operation = (*Loop)(nil)
+
 // Operator is the ast node which represents all the simple operations.
 type Operator token.Token
 
 func (o *Operator) Node()      {}
 func (o *Operator) Operation() {}
+
+// verify interface compliance
+var _ Node = (*Operator)(nil)
+var _ Operation = (*Operator)(nil)
