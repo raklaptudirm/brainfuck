@@ -15,12 +15,21 @@
 // brainfuck code and related functions.
 package bytecode
 
-import "fmt"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 // Chunk represents a chunk of bytecode.
 type Chunk struct {
 	Name string // name of the chunk
 	code []Instruction
+}
+
+// Set sets the instruction at the provided offset in the chunk to the
+// given instruction.
+func (c *Chunk) Set(offset int, i Instruction) {
+	c.code[offset] = i
 }
 
 // Write writes a new instruction to the bytecode chunk.
@@ -36,6 +45,33 @@ func (c *Chunk) Length() int {
 // Instruction returns the instruction as offset i in the chunk.
 func (c *Chunk) Instruction(i int) Instruction {
 	return c.code[i]
+}
+
+// Uint16 returns the uint16 encoded in the chunk from the given offset.
+func (c *Chunk) Uint16(offset int) uint16 {
+	// decode big endian number
+	return binary.BigEndian.Uint16([]byte{byte(c.code[offset]), byte(c.code[offset+1])})
+}
+
+// WriteUint16 writes a 16-bit big endian number into the chunk.
+func (c *Chunk) WriteUint16(i uint16) {
+	var buf [2]byte
+	// encode number
+	binary.BigEndian.PutUint16(buf[:], i)
+	for _, b := range buf {
+		c.Write(Instruction(b))
+	}
+}
+
+// WriteUint16 writes a 16-bit big endian number into the chunk at the
+// provided offset.
+func (c *Chunk) WriteUint16At(offset int, ins uint16) {
+	var buf [2]byte
+	// encode number
+	binary.BigEndian.PutUint16(buf[:], ins)
+	for i, b := range buf {
+		c.Set(offset+i, Instruction(b))
+	}
 }
 
 // String disassembles the chunk into a human readable string.
@@ -63,7 +99,7 @@ func (c *Chunk) disassembleInstruction(offset int) (string, int) {
 
 	// instructions with one argument
 	case JumpIfZero, JumpIfNotZero:
-		return fmt.Sprintf("%4d %-17s %3d\n", offset, i, byte(c.code[offset+1])), offset + 2
+		return fmt.Sprintf("%4d %-17s %3d\n", offset, i, c.Uint16(offset+1)), offset + 3
 
 	// invalid instruction
 	default:
