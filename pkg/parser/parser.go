@@ -38,20 +38,20 @@ type parser struct {
 // SyntaxError represents a brainfuck syntax error at a particular token.
 type SyntaxError struct {
 	Token   token.Token // token at which error occurred
-	Message error       // the error
+	message error       // the error
 }
 
 // Error implements the error interface.
 func (e *SyntaxError) Error() string {
-	return fmt.Sprintf("%s: %v", e.Token.Position, e.Message)
+	return fmt.Sprintf("parser: %s: %v", e.Token.Position, e.message)
 }
 
-// Unwrap allows SyntaxErrors to be compared using errors.Is.
+// Unwrap exposes the underlying error in SyntaxError.
 func (e *SyntaxError) Unwrap() error {
-	return e.Message
+	return e.message
 }
 
-// error values which are held inside SyntaxError
+// Error values which are held inside SyntaxError.
 var (
 	ErrNotOpened = fmt.Errorf("unexpected token ']', no open loop")
 	ErrNotClosed = fmt.Errorf("unexpected token EOF, loop not closed")
@@ -87,9 +87,9 @@ func (p *parser) operation() (ast.Operation, error) {
 
 	// invalid
 	case token.RightBracket:
-		return nil, &SyntaxError{Token: p.current, Message: ErrNotOpened}
+		return nil, &SyntaxError{Token: p.current, message: ErrNotOpened}
 	default:
-		panic("invalid token in token stream")
+		panic("parser: invalid token in token stream")
 	}
 }
 
@@ -99,7 +99,7 @@ func (p *parser) loop() (*ast.Loop, error) {
 
 	for p.next(); p.tokType != token.RightBracket; p.next() {
 		if p.tokType == token.Eof {
-			return nil, &SyntaxError{Token: p.current, Message: ErrNotClosed}
+			return nil, &SyntaxError{Token: p.current, message: ErrNotClosed}
 		}
 
 		operation, err := p.operation()
