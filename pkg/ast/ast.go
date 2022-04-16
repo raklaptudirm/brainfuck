@@ -1,4 +1,4 @@
-// Copyright © 2021 Rak Laptudirm <raklaptudirm@gmail.com>
+// Copyright © 2022 Rak Laptudirm <raklaptudirm@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,63 +11,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package ast defines structures to represent brainfuck code as an
+// abstract syntax tree.
 package ast
 
 import "laptudirm.com/x/brainfuck/pkg/token"
 
+// Node is the interface implemented by all ast nodes.
 type Node interface {
-	TokenLiteral() string
+	Node()
 }
 
+// Program is the main node of a brainfuck ast.
 type Program struct {
 	Operations []Operation
 }
 
-func (p *Program) TokenLiteral() string {
-	s := ""
-	for _, op := range p.Operations {
-		s += op.TokenLiteral()
-	}
+func (p *Program) Node() {}
 
-	return s
-}
+// verify interface compliance
+var _ Node = (*Program)(nil)
 
+// Operation is the interface implemented by all brainfuck operation ast
+// nodes.
 type Operation interface {
 	Node
-	operationNode()
+	Operation()
 }
 
-type Comment struct {
-	Literal string
-}
-
-func (c *Comment) TokenLiteral() string {
-	return c.Literal
-}
-
-func (c *Comment) operationNode() {}
-
-type Operator struct {
-	Token token.Token
-}
-
-func (o *Operator) TokenLiteral() string {
-	return o.Token.String()
-}
-
-func (o *Operator) operationNode() {}
-
+// Loop is the ast node which represents a brainfuck loop.
 type Loop struct {
 	Operations []Operation
 }
 
-func (l *Loop) TokenLiteral() string {
-	s := "["
-	for _, op := range l.Operations {
-		s += op.TokenLiteral()
-	}
+func (l *Loop) Node()      {}
+func (l *Loop) Operation() {}
 
-	return s + "]"
-}
+// verify interface compliance
+var _ Node = (*Loop)(nil)
+var _ Operation = (*Loop)(nil)
 
-func (l *Loop) operationNode() {}
+// Operator is the ast node which represents all the simple operations.
+type Operator token.Token
+
+func (o *Operator) Node()      {}
+func (o *Operator) Operation() {}
+
+// verify interface compliance
+var _ Node = (*Operator)(nil)
+var _ Operation = (*Operator)(nil)

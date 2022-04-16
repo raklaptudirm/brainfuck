@@ -1,4 +1,4 @@
-// Copyright © 2021 Rak Laptudirm <raklaptudirm@gmail.com>
+// Copyright © 2022 Rak Laptudirm <raklaptudirm@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,79 +11,110 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package parser implements a brainfuck parser that parses a brainfuck
+// token stream into an abstract syntax tree.
 package parser
 
 import (
+	"fmt"
+
 	"laptudirm.com/x/brainfuck/pkg/ast"
-	"laptudirm.com/x/brainfuck/pkg/lexer"
 	"laptudirm.com/x/brainfuck/pkg/token"
 )
 
-type Parser struct {
-	l *lexer.Lexer
-
-	err lexer.ErrorHandler
-
-	tok token.Token
-	pos token.Position
-	lit string
-
-	ErrorCount int
+// Parse parses a brainfuck token stream into an abstract syntax tree.
+func Parse(tokens <-chan token.Token) (*ast.Program, error) {
+	p := parser{tokens: tokens}
+	return p.program()
 }
 
-func (p *Parser) Init(l *lexer.Lexer, err lexer.ErrorHandler) {
-	p.l = l
-	p.err = err
+// parser is a state machine which represents the current parsing state.
+type parser struct {
+	tokens  <-chan token.Token // token stream
+	current token.Token        // current token
+	tokType token.Type         // type of current
 }
 
-func (p *Parser) ParseProgram() *ast.Program {
+// SyntaxError represents a brainfuck syntax error at a particular token.
+type SyntaxError struct {
+	Token   token.Token // token at which error occurred
+	message error       // the error
+}
+
+// Error implements the error interface.
+func (e *SyntaxError) Error() string {
+	return fmt.Sprintf("parser: %s: %v", e.Token.Position, e.message)
+}
+
+// Unwrap exposes the underlying error in SyntaxError.
+func (e *SyntaxError) Unwrap() error {
+	return e.message
+}
+
+// Error values which are held inside SyntaxError.
+var (
+	ErrNotOpened = fmt.Errorf("unexpected token ']', no open loop")
+	ErrNotClosed = fmt.Errorf("unexpected token EOF, loop not closed")
+)
+
+// program parses a brainfuck program from the token stream.
+func (p *parser) program() (*ast.Program, error) {
 	program := &ast.Program{}
 
-	for p.next(); p.tok != token.EOF; p.next() {
-		op := p.parseOperation()
-		program.Operations = append(program.Operations, op)
+	for p.next(); p.tokType != token.Eof; p.next() {
+		operation, err := p.operation()
+		if err != nil {
+			return nil, err
+		}
+
+		program.Operations = append(program.Operations, operation)
 	}
 
-	return program
+	return program, nil
 }
 
-func (p *Parser) parseOperation() ast.Operation {
-	switch p.tok {
-	case token.COMMENT:
-		return &ast.Comment{Literal: p.lit}
-	case token.SLOOP:
-		return p.parseLoop()
-	case token.ELOOP:
-		p.error(p.pos, "unexpected ]")
-		return nil
+// operation parses a brainfuck operation from the token stream.
+func (p *parser) operation() (ast.Operation, error) {
+	switch p.tokType {
+	// simple operations
+	case token.Plus, token.Minus, token.LeftArrow, token.RightArrow, token.Comma, token.Period:
+		operator := ast.Operator(p.current)
+		return &operator, nil
+
+	// loop operation
+	case token.LeftBracket:
+		return p.loop()
+
+	// invalid
+	case token.RightBracket:
+		return nil, &SyntaxError{Token: p.current, message: ErrNotOpened}
 	default:
-		return &ast.Operator{Token: p.tok}
+		panic("parser: invalid token in token stream")
 	}
 }
 
-func (p *Parser) parseLoop() *ast.Loop {
+// loop parses a brainfuck loop from the token stream.
+func (p *parser) loop() (*ast.Loop, error) {
 	loop := &ast.Loop{}
-	pos := p.pos
 
-	for p.next(); p.tok != token.ELOOP && p.tok != token.EOF; p.next() {
-		op := p.parseOperation()
-		loop.Operations = append(loop.Operations, op)
+	for p.next(); p.tokType != token.RightBracket; p.next() {
+		if p.tokType == token.Eof {
+			return nil, &SyntaxError{Token: p.current, message: ErrNotClosed}
+		}
+
+		operation, err := p.operation()
+		if err != nil {
+			return nil, err
+		}
+
+		loop.Operations = append(loop.Operations, operation)
 	}
 
-	if p.tok == token.EOF {
-		p.error(pos, `unexpected EOF, expected ]`)
-	}
-
-	return loop
+	return loop, nil
 }
 
-func (p *Parser) error(pos token.Position, err string) {
-	p.ErrorCount++
-	if p.err != nil {
-		p.err(pos, err)
-	}
-}
-
-func (p *Parser) next() {
-	p.pos, p.tok, p.lit = p.l.Next()
+// next gets the next token from the token stream and stores it in current.
+func (p *parser) next() {
+	p.current = <-p.tokens
+	p.tokType = p.current.Type
 }

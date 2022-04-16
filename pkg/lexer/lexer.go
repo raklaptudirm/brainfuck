@@ -1,4 +1,4 @@
-// Copyright © 2021 Rak Laptudirm <raklaptudirm@gmail.com>
+// Copyright © 2022 Rak Laptudirm <raklaptudirm@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,149 +11,115 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package lexer contains an implementation of a brainfuck lexer which
+// lexes brainfuck code into tokens concurrently. It only exposes the Lex
+// function which should be used to lex any brainfuck code.
 package lexer
 
-import (
-	"unicode/utf8"
+import "laptudirm.com/x/brainfuck/pkg/token"
 
-	"laptudirm.com/x/brainfuck/pkg/token"
-)
+// Lex lexes brainfuck code into a stream of tokens concurrently which are
+// sent into the tokens channel. It does not verify whether the code is
+// valid brainfuck.
+func Lex(data []byte) <-chan token.Token {
+	l := lexer{
+		data:   data,
+		pos:    token.Position{Line: 1, Column: 1},
+		tokens: make(chan token.Token),
+	}
 
-type Lexer struct {
-	src string
-	ch  rune
-
-	err ErrorHandler
-
-	offset   int
-	rdOffset int
-
-	pos token.Position
-
-	ErrorCount int
+	// start concurrent tokenization
+	go l.program()
+	return l.tokens
 }
 
-const (
-	eof = -1     // end of file
-	bom = 0xFEFF // byte order mark
-)
+// lexer is a state machine representing the current state of the lexer.
+type lexer struct {
+	data []byte // source data
 
-func (l *Lexer) Init(src string, handler ErrorHandler) {
-	l.src = src
-	l.err = handler
+	// state
+	offset int              // current offset within data
+	curr   rune             // current rune
+	pos    token.Position   // current position
+	tokens chan token.Token // tokens channel
+}
 
-	l.offset = 0
-	l.rdOffset = 0
+// eof is a constant representing the end of file.
+const eof = -1
 
-	l.pos = token.Position{
-		Line: 1,
-		Col:  1,
+// program lexes a brainfuck program from the data in the lexer.
+func (l *lexer) program() {
+	for {
+		var tok token.Type
+
+		switch l.peek() {
+		case eof:
+			tok = token.Eof
+		case '+':
+			tok = token.Plus
+		case '-':
+			tok = token.Minus
+		case '<':
+			tok = token.LeftArrow
+		case '>':
+			tok = token.RightArrow
+		case ',':
+			tok = token.Comma
+		case '.':
+			tok = token.Period
+		case '[':
+			tok = token.LeftBracket
+		case ']':
+			tok = token.RightBracket
+		default:
+			// ignore comments
+			l.next()
+			continue
+		}
+
+		// emit token
+		l.emit(tok)
+		l.next()
+		if tok == token.Eof {
+			return
+		}
 	}
 }
 
-func (l *Lexer) Next() (pos token.Position, tok token.Token, lit string) {
-	pos = l.pos
-
-	switch l.consume(); l.ch {
-	case eof:
-		tok = token.EOF
-	case '+':
-		tok = token.INC_VAL
-	case '-':
-		tok = token.DEC_VAL
-	case '>':
-		tok = token.INC_PTR
-	case '<':
-		tok = token.DEC_PTR
-	case ',':
-		tok = token.INPUT
-	case '.':
-		tok = token.PRINT
-	case '[':
-		tok = token.SLOOP
-	case ']':
-		tok = token.ELOOP
-	default:
-		tok = l.lexComment()
-	}
-
-	lit = l.src[l.offset:l.rdOffset]
-	l.offset = l.rdOffset
-	return
-}
-
-func (l *Lexer) lexComment() token.Token {
-	for ch := l.peek(); !isOperator(ch) && !l.atEnd(); ch = l.peek() {
-		l.consume()
-	}
-
-	return token.COMMENT
-}
-
-func (l *Lexer) consume() {
-	if l.atEnd() {
-		l.ch = eof
+// next moves the lexer forward in it's data.
+func (l *lexer) next() {
+	if l.curr = l.peek(); l.curr == eof {
 		return
 	}
 
-	r, w := rune(l.src[l.rdOffset]), 1
-	if r == 0 {
-		l.error("illegal character NUL")
-		goto advance
-	}
+	l.offset++
 
-	if r < utf8.RuneSelf {
-		goto advance
-	}
-
-	r, w = utf8.DecodeRuneInString(l.src[l.rdOffset:])
-
-	if r == utf8.RuneError && w == 1 {
-		l.error("illegal UTF-8 encoding")
-		goto advance
-	}
-
-	if r == bom && l.offset > 0 {
-		l.error("illegal byte order mark")
-	}
-
-advance:
-	l.ch = r
-
-	l.rdOffset += w
-	l.pos.Col += w
-
-	if r == '\n' {
+	if l.curr == '\n' {
 		l.pos.NextLine()
+	} else {
+		l.pos.Column++
 	}
 }
 
-func (l *Lexer) error(err string) {
-	l.ErrorCount++
-	if l.err != nil {
-		l.err(l.pos, err)
-	}
-}
-
-func (l *Lexer) peek() rune {
-	if l.atEnd() {
+// peek returns the next byte in the lexer's data.
+func (l *lexer) peek() rune {
+	// check if at eof
+	if l.offset >= len(l.data) {
 		return eof
 	}
 
-	return rune(l.src[l.rdOffset])
+	return rune(l.data[l.offset])
 }
 
-func (l *Lexer) atEnd() bool {
-	return l.rdOffset >= len(l.src)
-}
+// emit emits the a token of the provided token type into the token stream.
+func (l *lexer) emit(tok token.Type) {
+	l.tokens <- token.Token{
+		Type:     tok,
+		Position: l.pos,
+	}
 
-type ErrorHandler func(token.Position, string)
-
-func isOperator(r rune) bool {
-	switch r {
-	case '+', '-', '>', '<', '[', ']', ',', '.':
-		return true
-	default:
-		return false
+	// if Eof has been emitted, close channel
+	if tok == token.Eof {
+		close(l.tokens)
 	}
 }

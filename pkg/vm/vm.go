@@ -1,4 +1,4 @@
-// Copyright © 2021 Rak Laptudirm <raklaptudirm@gmail.com>
+// Copyright © 2022 Rak Laptudirm <raklaptudirm@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,87 +11,96 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package vm implements a virtual machine that can run brainfuck bytecode.
 package vm
 
 import (
-	"errors"
 	"fmt"
 
-	"laptudirm.com/x/brainfuck/pkg/ast"
-	"laptudirm.com/x/brainfuck/pkg/token"
+	"laptudirm.com/x/brainfuck/pkg/bytecode"
 )
 
-type Machine struct {
-	Length  int
-	Memory  []byte
-	Pointer int
+// New creates a new virtualMachine with the provided tape length.
+func New(size int) *virtualMachine {
+	return &virtualMachine{tape: make([]byte, size), tapeSize: size}
 }
 
-func New(l int) *Machine {
-	return &Machine{
-		Length: l,
-		Memory: make([]byte, l),
-	}
+// virtualMachine is a virtual machine.Brainfuck bytecode can be run on it
+// by calling (virtualMachine).RunChunk.
+type virtualMachine struct {
+	tape     []byte // the vm's memory
+	tapeSize int    // memory length
+	pointer  int    // memory pointer
 }
 
-var ErrAst = errors.New("invalid ast structure")
+// InvalidBytecode is a wrapper error when the vm finds an invalid bytecode
+// in the chunk.
+type InvalidBytecode struct {
+	Instruction bytecode.Instruction
+}
 
-func (m *Machine) Execute(n ast.Node) error {
-	switch v := n.(type) {
-	case *ast.Program:
-		return m.executeOperations(v.Operations)
-	case *ast.Comment:
-		return nil // ignore comments
-	case *ast.Loop:
-		if m.Memory[m.Pointer] == 0 {
-			return nil
-		}
+// Error implements the error interface.
+func (e *InvalidBytecode) Error() string {
+	return fmt.Sprintf("vm: invalid bytecode %3d in chunk", e.Instruction)
+}
 
-		for {
-			err := m.executeOperations(v.Operations)
-			if err != nil {
-				return err
+// RunChunk runs a bytecode chunk in the virtual machine.
+func (v *virtualMachine) RunChunk(c *bytecode.Chunk) error {
+	for i, length := 0, c.Length(); i < length; i++ {
+		// run the instruction
+		switch c.Instruction(i) {
+		case bytecode.IncreaseValue:
+			v.tape[v.pointer]++
+
+		case bytecode.DecreaseValue:
+			v.tape[v.pointer]--
+
+		case bytecode.IncreasePointer:
+			v.pointer++
+
+			// pointer rollover
+			if v.pointer >= v.tapeSize {
+				v.pointer = 0
 			}
 
-			if m.Memory[m.Pointer] == 0 {
-				return nil
+		case bytecode.DecreasePointer:
+			v.pointer--
+
+			// pointer rollover
+			if v.pointer < 0 {
+				v.pointer = v.tapeSize - 1
 			}
+
+		case bytecode.InputByte:
+			fmt.Scanf("%c", &v.tape[v.pointer])
+
+		case bytecode.OutputByte:
+			fmt.Print(string(v.tape[v.pointer]))
+
+		case bytecode.JumpIfZero:
+			// check if value is zero
+			if v.tape[v.pointer] == 0 {
+				// jump
+				i += int(c.Uint16(i + 1))
+			}
+
+			// jump over offset bytes
+			i += 2
+
+		case bytecode.JumpIfNotZero:
+			// check if value is non-zero
+			if v.tape[v.pointer] != 0 {
+				// jump
+				i -= int(c.Uint16(i + 1))
+			}
+
+			// jump over offset bytes
+			i += 2
+
+		default:
+			// invalid instruction
+			return &InvalidBytecode{c.Instruction(i)}
 		}
-	case *ast.Operator:
-		return m.executeOperator(v)
-	default:
-		return ErrAst
-	}
-}
-
-func (m *Machine) executeOperations(operations []ast.Operation) error {
-	for _, operation := range operations {
-		err := m.Execute(operation)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *Machine) executeOperator(o *ast.Operator) error {
-	switch o.Token {
-	case token.INC_VAL:
-		m.Memory[m.Pointer]++
-	case token.DEC_VAL:
-		m.Memory[m.Pointer]--
-	case token.INC_PTR:
-		m.Pointer++
-	case token.DEC_PTR:
-		m.Pointer--
-	case token.INPUT:
-		_, err := fmt.Scanf("%c", &m.Memory[m.Pointer])
-		return err
-	case token.PRINT:
-		fmt.Print(string(m.Memory[m.Pointer]))
-	default:
-		return fmt.Errorf("invalid operator %s", o.Token)
 	}
 
 	return nil

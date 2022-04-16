@@ -1,4 +1,4 @@
-// Copyright © 2021 Rak Laptudirm <raklaptudirm@gmail.com>
+// Copyright © 2022 Rak Laptudirm <raklaptudirm@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,66 +11,70 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package token defines constants which represent the basic lexical
+// elements of the brainfuck programming language. It also defines types
+// which represent the context a token was found in.
 package token
 
-import "strconv"
+import "fmt"
 
-type Token int
+// Token represents the basic lexical element of the brainfuck programming
+// language and the context it was found in.
+type Token struct {
+	Type
+	Position
+}
+
+// Type represents the type of a Token.
+type Type int
 
 const (
-	// special tokens
-	ILLEGAL Token = iota
-	COMMENT
-	EOF
+	Eof Type = iota
 
-	// value operators
-	INC_VAL // +
-	DEC_VAL // -
+	Plus  // +
+	Minus // -
 
-	// memory address
-	INC_PTR // >
-	DEC_PTR // <
+	LeftArrow  // <
+	RightArrow // >
 
-	// looping
-	SLOOP // [
-	ELOOP // ]
+	Comma  // ,
+	Period // .
 
-	// io operators
-	INPUT // ,
-	PRINT // .
+	LeftBracket  // [
+	RightBracket // ]
 )
 
 var tokens = [...]string{
-	ILLEGAL: "ILLEGAL",
-	COMMENT: "COMMENT",
-	EOF:     "EOF",
-
-	INC_VAL: "+",
-	DEC_VAL: "-",
-
-	INC_PTR: ">",
-	DEC_PTR: "<",
-
-	SLOOP: "[",
-	ELOOP: "]",
-
-	INPUT: ",",
-	PRINT: ".",
+	Eof:          "EOF",
+	Plus:         "+",
+	Minus:        "-",
+	LeftArrow:    "<",
+	RightArrow:   ">",
+	Comma:        ",",
+	Period:       ".",
+	LeftBracket:  "[",
+	RightBracket: "]",
 }
 
-// String returns the string corresponding to the token tok.
-// For operators, delimiters, and keywords the string is the actual
-// token character sequence (e.g., for the token ADD, the string is
-// "+"). For all other tokens the string corresponds to the token
-// constant name (e.g. for the token IDENT, the string is "IDENT").
-//
-func (tok Token) String() string {
-	s := ""
-	if 0 <= tok && tok < Token(len(tokens)) {
-		s = tokens[tok]
-	}
-	if s == "" {
-		s = "token(" + strconv.Itoa(int(tok)) + ")"
-	}
-	return s
+// String returns a string representation of the Type.
+func (t Type) String() string {
+	return tokens[t]
+}
+
+// Position represents the position of a token in a file.
+type Position struct {
+	Line   int
+	Column int
+}
+
+// String returns a string representation of a position in the format
+// <line>:<column>
+func (p Position) String() string {
+	return fmt.Sprintf("%d:%d", p.Line, p.Column)
+}
+
+// NextLine moves the position to the next line.
+func (p *Position) NextLine() {
+	p.Line++
+	p.Column = 1
 }
