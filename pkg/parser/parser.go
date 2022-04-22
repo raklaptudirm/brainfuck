@@ -12,18 +12,18 @@
 // limitations under the License.
 
 // Package parser implements a brainfuck parser that parses a brainfuck
-// token stream into an abstract syntax tree.
+// token stream into an instruction set.
 package parser
 
 import (
 	"fmt"
 
-	"laptudirm.com/x/brainfuck/pkg/ast"
+	"laptudirm.com/x/brainfuck/pkg/instruction"
 	"laptudirm.com/x/brainfuck/pkg/token"
 )
 
 // Parse parses a brainfuck token stream into an abstract syntax tree.
-func Parse(tokens <-chan token.Token) (*ast.Program, error) {
+func Parse(tokens <-chan token.Token) (*instruction.Chunk, error) {
 	p := parser{tokens: tokens}
 	return p.program()
 }
@@ -32,7 +32,6 @@ func Parse(tokens <-chan token.Token) (*ast.Program, error) {
 type parser struct {
 	tokens  <-chan token.Token // token stream
 	current token.Token        // current token
-	tokType token.Type         // type of current
 }
 
 // SyntaxError represents a brainfuck syntax error at a particular token.
@@ -58,63 +57,65 @@ var (
 )
 
 // program parses a brainfuck program from the token stream.
-func (p *parser) program() (*ast.Program, error) {
-	program := &ast.Program{}
+func (p *parser) program() (*instruction.Chunk, error) {
+	var c instruction.ChunkBuilder
+	var stack []token.Token // loop stack
 
-	for p.next(); p.tokType != token.Eof; p.next() {
-		operation, err := p.operation()
-		if err != nil {
-			return nil, err
+parseLoop:
+	for {
+		switch p.next(); p.current.Type {
+
+		// end of token stream
+		case token.Eof:
+			break parseLoop
+
+		// value changing commands
+		case token.Plus:
+			c.Put(&instruction.Value{X: 1})
+		case token.Minus:
+			c.Put(&instruction.Value{X: 255}) // -1 mod 256(byte)
+
+		// pointer changing commands
+		case token.LeftArrow:
+			c.Put(&instruction.Pointer{X: -1})
+		case token.RightArrow:
+			c.Put(&instruction.Pointer{X: 1})
+
+		// i/o commands
+		case token.Comma:
+			c.Put(&instruction.Input{})
+		case token.Period:
+			c.Put(&instruction.Output{})
+
+		// looping constructs
+		case token.LeftBracket:
+			stack = append(stack, p.current) // push
+			c.Put(&instruction.StartLoop{})
+		case token.RightBracket:
+			if len(stack) == 0 {
+				// no opened loop, syntax error
+				return nil, &SyntaxError{p.current, ErrNotOpened}
+			}
+
+			stack = stack[:len(stack)-1] // pop
+			c.Put(&instruction.EndLoop{})
+
+		default:
+			// unreachable
+			panic("parser: invalid token from scanner")
 		}
-
-		program.Operations = append(program.Operations, operation)
 	}
 
-	return program, nil
-}
-
-// operation parses a brainfuck operation from the token stream.
-func (p *parser) operation() (ast.Operation, error) {
-	switch p.tokType {
-	// simple operations
-	case token.Plus, token.Minus, token.LeftArrow, token.RightArrow, token.Comma, token.Period:
-		operator := ast.Operator(p.current)
-		return &operator, nil
-
-	// loop operation
-	case token.LeftBracket:
-		return p.loop()
-
-	// invalid
-	case token.RightBracket:
-		return nil, &SyntaxError{Token: p.current, message: ErrNotOpened}
-	default:
-		panic("parser: invalid token in token stream")
-	}
-}
-
-// loop parses a brainfuck loop from the token stream.
-func (p *parser) loop() (*ast.Loop, error) {
-	loop := &ast.Loop{}
-
-	for p.next(); p.tokType != token.RightBracket; p.next() {
-		if p.tokType == token.Eof {
-			return nil, &SyntaxError{Token: p.current, message: ErrNotClosed}
-		}
-
-		operation, err := p.operation()
-		if err != nil {
-			return nil, err
-		}
-
-		loop.Operations = append(loop.Operations, operation)
+	// check for unclosed loops
+	if len(stack) > 0 {
+		return nil, &SyntaxError{stack[len(stack)-1], ErrNotClosed}
 	}
 
-	return loop, nil
+	// finalize and return chunk
+	return c.Finalize(), nil
 }
 
 // next gets the next token from the token stream and stores it in current.
 func (p *parser) next() {
 	p.current = <-p.tokens
-	p.tokType = p.current.Type
 }
