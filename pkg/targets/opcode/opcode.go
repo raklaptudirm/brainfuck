@@ -11,21 +11,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package bytecode implements the bytecode compilation target. It provides
-// structures and methods to compile an instruction.Chunk into bytecode and
+// Package opcode implements the opcode compilation target. It provides
+// structures and methods to compile an instruction.Chunk into opcode and
 // to run the same.
-package bytecode
+package opcode
 
-// Bytecode represents a single bytecode instruction.
-type Bytecode byte
+// Opcode represents a single opcode instruction.
+type Opcode int
 
-// constants representing various bytecode instructions.
+// Various opcode instructions.
 const (
-	ChangeValue Bytecode = iota
-	ChangePointer
-	InputByte
-	OutputByte
-	JumpIfZero
-	JumpIfNotZero
-	ClearValue
+	_ Opcode = iota
+
+	ChangeValue   // [code] [offset] [amount]
+	ChangePointer // [code] [amount]
+	InputByte     // [code] [offset]
+	OutputByte    // [code] [offset]
+	JumpIfZero    // [code] [offset] [jump-offset]
+	JumpIfNotZero // [code] [jump-offset]
+	ClearValue    // [code] [offset]
 )

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bytecode
+package opcode
 
 import (
 	"fmt"
@@ -20,87 +20,75 @@ import (
 )
 
 // vm is a Virtual Machine which records the state of the brainfuck program
-// as bytecode gets interpreted.
+// as opcode gets interpreted.
 type vm struct {
 	memory  []byte // memory tape
 	pointer int    // memory pointer
 }
 
-// Run interprets a bytecode instruction slice. It panics if it encounters
-// an unknown instruction. Currently the memory length of the vm is hard-
-// coded to 30000.
-func Run(c []byte) {
-	// TODO: customizable memory length
+func Run(oc []int) {
+	// TODO: make these options customizable
 	v := vm{memory: make([]byte, 30000)}
-	length := len(c)
-
-	// TODO: make this customizable
 	buffer := printBuffer{
 		writer:    os.Stdout,
 		autoFlush: true,
 		length:    50,
 	}
 
+	length := len(oc)
 	for i := 0; i < length; i++ {
-		switch Bytecode(c[i]) {
+		switch Opcode(oc[i]) {
 		case ChangeValue:
-			i++
-			change := c[i]
-			offset, length := uintFromBytes(c[i+1:])
-			v.memory[v.pointer+int(offset)] += change
-			i += length
+			pointer := v.pointer + oc[i+1]     // calculate pointer offset
+			v.memory[pointer] += byte(oc[i+2]) // change value by amount
+			i += 2                             // update instruction pointer
 
 		case ChangePointer:
-			x, l := uintFromBytes(c[i+1:])
-			v.pointer += int(x)
-			i += l
+			i++                // update instruction pointer
+			v.pointer += oc[i] // update memory pointer
 
 		case InputByte:
-			x, l := uintFromBytes(c[i+1:])
-			i += l
-			fmt.Scanf("%c", &v.memory[v.pointer+int(x)])
-		case OutputByte:
-			x, l := uintFromBytes(c[i+1:])
-			i += l
+			i++                                 // update instruction pointer
+			pointer := v.pointer + oc[i]        // calculate pointer offset
+			fmt.Scanf("%c", &v.memory[pointer]) // store input in memory
 
-			// syscalls are expensive, buffer output bytes
-			buffer.Write(v.memory[v.pointer+int(x)])
+		case OutputByte:
+			i++                             // update instruction pointer
+			pointer := v.pointer + oc[i]    // calculate pointer offset
+			buffer.Write(v.memory[pointer]) // output current cell value
 
 		case JumpIfZero:
-			offset, l := uintFromBytes(c[i+1:])
-			i += l
+			i++                // update instruction pointer
+			v.pointer += oc[i] // change pointer by offset
 
-			v.pointer += int(offset)
+			i++           // update instruction pointer
+			jump := oc[i] // get jump offset
 
-			x, l := uintFromBytes(c[i+1:])
-			i += l // jump over offset bytes
-
+			// jump if zero
 			if v.memory[v.pointer] == 0 {
-				// current cell 0, so jump to loop end
-				i += int(x)
+				i += jump
 			}
+
 		case JumpIfNotZero:
-			x, l := uintFromBytes(c[i+1:])
-			if v.memory[v.pointer] == 0 {
-				// current cell 0, so jump over offset bytes
-				i += l
-			} else {
-				// current cell not 0, so jump back to loop start
-				i -= int(x)
+			i++           // update instruction pointer
+			jump := oc[i] // get jump offset
+
+			// jump back if not zero
+			if v.memory[v.pointer] != 0 {
+				i -= jump
 			}
 
 		case ClearValue:
-			x, l := uintFromBytes(c[i+1:])
-			i += l
-			v.memory[v.pointer+int(x)] = 0
+			i++                          // update instruction pointer
+			pointer := v.pointer + oc[i] // calculate pointer offset
+			v.memory[pointer] = 0        // clear current cell
 
 		default:
-			// invalid bytecode instruction
-			panic(fmt.Sprintf("vm: invalid bytecode instruction %2x", c[i]))
+			panic(fmt.Sprintf("opcode: run: invalid opcode %x", uint(oc[i])))
 		}
 	}
 
-	// flush any remaining bytes
+	// flush any remaining output
 	buffer.Flush()
 }
 
