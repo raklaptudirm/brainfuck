@@ -27,7 +27,7 @@ type ChunkBuilder struct {
 // Calling Finalize when all loops have not been closed panics.
 func (c *ChunkBuilder) Finalize() *Chunk {
 	if !c.CanFinalize() {
-		panic("chunk: can't finalize chunk because of unclosed loops")
+		panic("chunk builder: can't finalize chunk because of unclosed loops")
 	}
 
 	// mark chunk as finalized
@@ -48,30 +48,36 @@ func (c *ChunkBuilder) CanFinalize() bool {
 // ChangeValue is a helper function for adding a *Value instruction to the
 // chunk, with the current offsets in mind.
 func (c *ChunkBuilder) ChangeValue(by int8) {
+	c.assertNotFinalized() // make sure chunk is not finalized
 	c.optimizedPush(&Value{X: byte(by), Offset: c.offset})
 }
 
 // ChangePointer is a helper function which represents adding a pointer
 // instruction to the chunk but actually changes the offset.
 func (c *ChunkBuilder) ChangePointer(change int) {
+	c.assertNotFinalized() // make sure chunk is not finalized
 	c.offset += change
 }
 
 // InputByte is a helper function for adding a *Input instruction to the
 // chunk, with the current offsets in mind.
 func (c *ChunkBuilder) InputByte() {
+	c.assertNotFinalized() // make sure chunk is not finalized
 	c.push(&Input{Offset: c.offset})
 }
 
 // OutputByte is a helper function for adding a *Output instruction to the
 // chunk, with the current offsets in mind.
 func (c *ChunkBuilder) OutputByte() {
+	c.assertNotFinalized() // make sure chunk is not finalized
 	c.push(&Output{Offset: c.offset})
 }
 
 // StartLoop is a helper function for adding a *StartLoop instruction to
 // the chunk, with the current offsets in mind.
 func (c *ChunkBuilder) StartLoop() {
+	c.assertNotFinalized() // make sure chunk is not finalized
+
 	c.loopStack = append(c.loopStack, len(c.ins)) // add to loop stack
 	c.push(&StartLoop{Offset: c.offset})          // push start loop
 	c.offset = 0                                  // reset offset count
@@ -80,8 +86,10 @@ func (c *ChunkBuilder) StartLoop() {
 // EndLoop is a helper function which encapsulates adding a *EndLoop
 // instruction to the chunk.
 func (c *ChunkBuilder) EndLoop() {
+	c.assertNotFinalized() // make sure chunk is not finalized
+
 	if len(c.loopStack) == 0 {
-		panic("chunk: unexpected *EndLoop")
+		panic("chunk builder: unexpected *EndLoop")
 	}
 
 	// reset offset, emit a pointer instruction if offset is not zero
@@ -118,6 +126,14 @@ func (c *ChunkBuilder) EndLoop() {
 	c.push(&EndLoop{})
 }
 
+// assertNotFinalized makes sure that the chunk has not been finalized, and
+// panics if it has been.
+func (c *ChunkBuilder) assertNotFinalized() {
+	if c.finalized {
+		panic("chunk builder: chunk has already been finalized")
+	}
+}
+
 // last is syntactic sugar for getting the last item in the instructions.
 func (c *ChunkBuilder) last() Instruction {
 	if len(c.ins) == 0 {
@@ -139,11 +155,6 @@ func (c *ChunkBuilder) pop() {
 // put puts the provided instructions into the chunk after optimizing them.
 // Any calls to put after the chunk has been finalized panic.
 func (c *ChunkBuilder) put(is ...Instruction) {
-	if c.IsFinalized() {
-		// can't push to finalized chunk
-		panic("chunk: chunk has already been finalized")
-	}
-
 	for _, i := range is {
 		c.optimizedPush(i)
 	}
