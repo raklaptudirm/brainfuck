@@ -15,11 +15,6 @@ package instruction
 
 import "fmt"
 
-// NewChunk creates a new Chunk with the given instruction list.
-func NewChunk(ins []Instruction) *Chunk {
-	return &Chunk{ins: ins}
-}
-
 // Chunk represents an immutable list of instructions.
 type Chunk struct {
 	ins []Instruction

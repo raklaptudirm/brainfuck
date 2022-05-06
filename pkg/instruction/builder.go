@@ -32,7 +32,7 @@ func (c *ChunkBuilder) Finalize() *Chunk {
 
 	// mark chunk as finalized
 	c.finalized = true
-	return NewChunk(c.ins)
+	return &Chunk{ins: c.ins}
 }
 
 // IsFinalized informs whether the chunk has been finalized or not.

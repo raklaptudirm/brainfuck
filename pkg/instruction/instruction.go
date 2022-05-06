@@ -13,10 +13,16 @@
 
 // Package instruction defines an optimized brainfuck instruction set which
 // acts as an intermediate representation for brainfuck code.
+//
 // Implementations can compile this intermediate code to any compilation
 // target. All conforming processes must properly handle all instructions
 // defined in this package, and reject any others. The interpretetion of
 // an instruction must also follow it's definition.
+//
+// Since an instruction chunk can only be created by the builder,
+// implementations may assume any *instruction.Chunk to be valid, i.e,
+// composed only of the specified instructions and with properly matched
+// loops.
 package instruction
 
 import "fmt"
