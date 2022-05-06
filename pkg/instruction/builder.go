@@ -97,6 +97,13 @@ func (c *ChunkBuilder) EndLoop() {
 	body := c.ins[start+1:]
 	offset := c.ins[start].(*StartLoop).Offset
 
+	// ignore initial comment loops
+	if start == 0 {
+		c.ins = nil       // clear instruction slice
+		c.offset = offset // reset current offset
+		return
+	}
+
 	// check if the loop body can be optimized
 	if i, ok := optimizeLoopBody(body, offset); ok {
 		c.ins = c.ins[:start] // remove loop body
