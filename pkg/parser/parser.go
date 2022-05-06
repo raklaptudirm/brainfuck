@@ -71,26 +71,26 @@ parseLoop:
 
 		// value changing commands
 		case token.Plus:
-			c.Put(&instruction.Value{X: 1})
+			c.ChangeValue(1)
 		case token.Minus:
-			c.Put(&instruction.Value{X: 255}) // -1 mod 256(byte)
+			c.ChangeValue(-1)
 
 		// pointer changing commands
 		case token.LeftArrow:
-			c.Put(&instruction.Pointer{X: -1})
+			c.ChangePointer(-1)
 		case token.RightArrow:
-			c.Put(&instruction.Pointer{X: 1})
+			c.ChangePointer(1)
 
 		// i/o commands
 		case token.Comma:
-			c.Put(&instruction.Input{})
+			c.InputByte()
 		case token.Period:
-			c.Put(&instruction.Output{})
+			c.OutputByte()
 
 		// looping constructs
 		case token.LeftBracket:
 			stack = append(stack, p.current) // push
-			c.Put(&instruction.StartLoop{})
+			c.StartLoop()
 		case token.RightBracket:
 			if len(stack) == 0 {
 				// no opened loop, syntax error
@@ -98,7 +98,7 @@ parseLoop:
 			}
 
 			stack = stack[:len(stack)-1] // pop
-			c.Put(&instruction.EndLoop{})
+			c.EndLoop()
 
 		default:
 			// unreachable

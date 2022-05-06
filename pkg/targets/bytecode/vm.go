@@ -36,16 +36,19 @@ func Run(c []byte) {
 
 	// TODO: make this customizable
 	buffer := printBuffer{
-		writer: os.Stdout,
-		aFlush: true,
-		length: 50,
+		writer:    os.Stdout,
+		autoFlush: true,
+		length:    50,
 	}
 
 	for i := 0; i < length; i++ {
 		switch Bytecode(c[i]) {
 		case ChangeValue:
 			i++
-			v.memory[v.pointer] += c[i]
+			change := c[i]
+			offset, length := uintFromBytes(c[i+1:])
+			v.memory[v.pointer+int(offset)] += change
+			i += length
 
 		case ChangePointer:
 			x, l := uintFromBytes(c[i+1:])
@@ -53,12 +56,22 @@ func Run(c []byte) {
 			i += l
 
 		case InputByte:
-			fmt.Scanf("%c", &v.memory[v.pointer])
+			x, l := uintFromBytes(c[i+1:])
+			i += l
+			fmt.Scanf("%c", &v.memory[v.pointer+int(x)])
 		case OutputByte:
+			x, l := uintFromBytes(c[i+1:])
+			i += l
+
 			// syscalls are expensive, buffer output bytes
-			buffer.Write(v.memory[v.pointer])
+			buffer.Write(v.memory[v.pointer+int(x)])
 
 		case JumpIfZero:
+			offset, l := uintFromBytes(c[i+1:])
+			i += l
+
+			v.pointer += int(offset)
+
 			x, l := uintFromBytes(c[i+1:])
 			i += l // jump over offset bytes
 
@@ -77,7 +90,9 @@ func Run(c []byte) {
 			}
 
 		case ClearValue:
-			v.memory[v.pointer] = 0
+			x, l := uintFromBytes(c[i+1:])
+			i += l
+			v.memory[v.pointer+int(x)] = 0
 
 		default:
 			// invalid bytecode instruction
@@ -95,9 +110,9 @@ type printBuffer struct {
 	buffer []byte // backlog
 
 	// options
-	writer io.Writer // writer to output to
-	aFlush bool      // automatically flush at intervals
-	length int       // max backlog, only applicable if aFlush = true
+	writer    io.Writer // writer to output to
+	autoFlush bool      // automatically flush at intervals
+	length    int       // max backlog, only applicable if aFlush = true
 }
 
 // Write puts the given bytes into the backlog, and flushes it if it's
@@ -105,7 +120,7 @@ type printBuffer struct {
 func (b *printBuffer) Write(bytes ...byte) {
 	b.buffer = append(b.buffer, bytes...)
 
-	if b.aFlush && len(b.buffer) > b.length {
+	if b.autoFlush && len(b.buffer) > b.length {
 		b.Flush()
 	}
 }

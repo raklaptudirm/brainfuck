@@ -27,21 +27,25 @@ func Compile(c *instruction.Chunk) []byte {
 	for i := 0; i < length; i++ {
 		ins := c.Instruction(i)
 
-		switch t := ins.(type) {
+		switch v := ins.(type) {
 		case *instruction.Value:
-			dst = append(dst, byte(ChangeValue), t.X)
+			dst = append(dst, byte(ChangeValue), v.X)
+			dst = append(dst, uintToBytes(uint64(v.Offset))...)
 
 		case *instruction.Pointer:
 			dst = append(dst, byte(ChangePointer))
-			dst = append(dst, uintToBytes(uint64(t.X))...)
+			dst = append(dst, uintToBytes(uint64(v.X))...)
 
 		case *instruction.Input:
 			dst = append(dst, byte(InputByte))
+			dst = append(dst, uintToBytes(uint64(v.Offset))...)
 		case *instruction.Output:
 			dst = append(dst, byte(OutputByte))
+			dst = append(dst, uintToBytes(uint64(v.Offset))...)
 
 		case *instruction.StartLoop:
 			dst = append(dst, byte(JumpIfZero))
+			dst = append(dst, uintToBytes(uint64(v.Offset))...)
 			stack = append(stack, len(dst)) // push index to stack
 		case *instruction.EndLoop:
 			start := stack[len(stack)-1] // get loop start index
@@ -64,6 +68,7 @@ func Compile(c *instruction.Chunk) []byte {
 
 		case *instruction.Clear:
 			dst = append(dst, byte(ClearValue))
+			dst = append(dst, uintToBytes(uint64(v.Offset))...)
 		}
 	}
 
