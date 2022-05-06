@@ -67,6 +67,7 @@ func Compile(c *instruction.Chunk) []int {
 			// difference between loop start and end
 			diff := len(dst) - start
 
+			// backpatch jump-offsets
 			dst[len(dst)-1], dst[start-1] = diff, diff
 
 		case *instruction.Clear:
@@ -75,7 +76,7 @@ func Compile(c *instruction.Chunk) []int {
 
 		default:
 			// unreachable
-			t := reflect.ValueOf(ins).Elem().Type()
+			t := reflect.ValueOf(ins).Elem().Type() // get instruction type
 			panic(fmt.Sprintf("opcode: compile: invalid instruction type %s in chunk", t))
 		}
 	}
