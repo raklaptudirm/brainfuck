@@ -30,6 +30,7 @@ import "fmt"
 // Instruction represents a brainfuck instruction.
 type Instruction interface {
 	Instruction() string
+	MemOffset() int
 }
 
 // Value instruction changes the value of the cell at the given offset from
@@ -43,6 +44,10 @@ func (v *Value) Instruction() string {
 	return fmt.Sprintf("Change Value at %d by %d", v.Offset, int8(v.X))
 }
 
+func (v *Value) MemOffset() int {
+	return v.Offset
+}
+
 // Pointer instruction changes the pointer by X.
 type Pointer struct {
 	X int
@@ -50,6 +55,10 @@ type Pointer struct {
 
 func (p *Pointer) Instruction() string {
 	return fmt.Sprintf("Change Pointer by %d", p.X)
+}
+
+func (p *Pointer) MemOffset() int {
+	return p.X
 }
 
 // Input instruction takes a single byte as input from the user and stores
@@ -62,6 +71,10 @@ func (i *Input) Instruction() string {
 	return fmt.Sprintf("Input Byte at %d", i.Offset)
 }
 
+func (i *Input) MemOffset() int {
+	return i.Offset
+}
+
 // Output instruction outputs the value of the cell at the given offset
 // from the current cell as a string, i.e. 65 -> A.
 type Output struct {
@@ -70,6 +83,10 @@ type Output struct {
 
 func (o *Output) Instruction() string {
 	return fmt.Sprintf("Output Byte at %d", o.Offset)
+}
+
+func (o *Output) MemOffset() int {
+	return o.Offset
 }
 
 // StartLoop instruction signals the start of a loop, after moving the
@@ -82,11 +99,19 @@ func (s *StartLoop) Instruction() string {
 	return fmt.Sprintf("Start Loop at %d", s.Offset)
 }
 
+func (s *StartLoop) MemOffset() int {
+	return s.Offset
+}
+
 // EndLoop instruction signals the end of a loop.
 type EndLoop struct{}
 
 func (e *EndLoop) Instruction() string {
 	return "End Loop"
+}
+
+func (e *EndLoop) MemOffset() int {
+	return 0
 }
 
 // Clear clears value of the cell at the given offset from the current cell.
@@ -96,4 +121,8 @@ type Clear struct {
 
 func (c *Clear) Instruction() string {
 	return fmt.Sprintf("Clear at %d", c.Offset)
+}
+
+func (c *Clear) MemOffset() int {
+	return c.Offset
 }

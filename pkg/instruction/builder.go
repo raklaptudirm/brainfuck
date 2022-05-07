@@ -63,7 +63,7 @@ func (c *ChunkBuilder) ChangePointer(change int) {
 // chunk, with the current offsets in mind.
 func (c *ChunkBuilder) InputByte() {
 	c.assertNotFinalized() // make sure chunk is not finalized
-	c.push(&Input{Offset: c.offset})
+	c.optimizedPush(&Input{Offset: c.offset})
 }
 
 // OutputByte is a helper function for adding a *Output instruction to the
@@ -103,7 +103,7 @@ func (c *ChunkBuilder) EndLoop() {
 	c.loopStack = c.loopStack[:last] // remove last element
 
 	body := c.ins[start+1:]
-	offset := c.ins[start].(*StartLoop).Offset
+	offset := c.ins[start].MemOffset()
 
 	// remove loops which are never executed
 	if c.isRedundantLoop(start, offset) {
@@ -205,15 +205,14 @@ func (c *ChunkBuilder) optimizedPush(i Instruction) {
 			}
 		}
 
-	case *Clear:
-		// Clear instruction makes any adjacent Value instructions redundant
-		if prev, ok := c.last().(*Value); ok && prev.Offset == curr.Offset {
-			c.pop()
-		}
-
-		// multiple Clear instructions are redundant
-		if prev, ok := c.last().(*Clear); ok && prev.Offset == curr.Offset {
-			return
+	case *Clear, *Input:
+		// Clear and Input instructions make any adjacent Value, Clear, or Input
+		// instructions redundant
+		switch v := c.last().(type) {
+		case *Value, *Clear, *Input:
+			if v.MemOffset() == curr.MemOffset() {
+				c.pop()
+			}
 		}
 	}
 
