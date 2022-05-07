@@ -192,20 +192,25 @@ func (c *ChunkBuilder) optimizedPush(i Instruction) {
 			return
 		}
 
+		// optimizations can only happen if the offsets are the same
 		if c.last() != nil && c.last().MemOffset() != curr.MemOffset() {
 			break
 		}
 
 		switch prev := c.last().(type) {
+		// merge multiple Value instructions into a single one
 		case *Value:
 			if t := prev.X + curr.X; t == 0 {
+				// value change is zero, so instruction is redundant
 				c.pop()
 			} else {
+				// backpatch value change in previous instruction
 				prev.X = t
 			}
 
 			return
 
+		// merge Value instructions into the Set instruction
 		case *Set:
 			prev.X += curr.X
 			return
@@ -222,6 +227,7 @@ func (c *ChunkBuilder) optimizedPush(i Instruction) {
 		}
 	}
 
+	// push instruction into chunk
 	c.push(i)
 }
 
