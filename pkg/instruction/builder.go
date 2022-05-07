@@ -105,8 +105,8 @@ func (c *ChunkBuilder) EndLoop() {
 	body := c.ins[start+1:]
 	offset := c.ins[start].(*StartLoop).Offset
 
-	// ignore initial comment loops
-	if start == 0 {
+	// remove loops which are never executed
+	if c.isRedundantLoop(start) {
 		c.ins = nil       // clear instruction slice
 		c.offset = offset // reset current offset
 		return
@@ -124,6 +124,27 @@ func (c *ChunkBuilder) EndLoop() {
 
 	// optimization failed, standard loop
 	c.push(&EndLoop{})
+}
+
+// isRedundantLoop checks if a loop starting at the given position in the
+// instruction chunk is redundant or not.
+//
+// Loops which are before any other instruction are redundant as all cells
+// are 0 by default. Loops which start right after the end of another loop
+// or a Clear instruction are redundant as the previous loop only exits
+// when the cell is zero.
+func (c *ChunkBuilder) isRedundantLoop(pos int) bool {
+	if pos == 0 {
+		return true
+	}
+
+	switch c.ins[pos-1].(type) {
+	case *Clear, *EndLoop:
+		// starts right after a loop
+		return true
+	default:
+		return false
+	}
 }
 
 // assertNotFinalized makes sure that the chunk has not been finalized, and
