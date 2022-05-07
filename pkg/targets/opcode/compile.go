@@ -35,10 +35,6 @@ func Compile(c *instruction.Chunk) []int {
 			// [code] [offset] [amount]
 			dst = append(dst, int(ChangeValue), v.Offset, int(v.X))
 
-		case *instruction.Pointer:
-			// [code] [amount]
-			dst = append(dst, int(ChangePointer), v.X)
-
 		case *instruction.Input:
 			// [code] [offset]
 			dst = append(dst, int(InputByte), v.Offset)
@@ -58,8 +54,8 @@ func Compile(c *instruction.Chunk) []int {
 				panic("opcode: compile: unexpected *EndLoop instruction in chunk")
 			}
 
-			// [code] [jump-offset]
-			dst = append(dst, int(JumpIfNotZero), 0)
+			// [code] [offset] [jump-offset]
+			dst = append(dst, int(JumpIfNotZero), v.Offset, 0)
 
 			start := stack[len(stack)-1] // get loop start index
 			stack = stack[:len(stack)-1] // pop loop index

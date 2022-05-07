@@ -23,11 +23,10 @@ type Opcode int
 const (
 	_ Opcode = iota
 
-	ChangeValue   // [code] [offset] [amount]
-	ChangePointer // [code] [amount]
 	InputByte     // [code] [offset]
 	OutputByte    // [code] [offset]
-	JumpIfZero    // [code] [offset] [jump-offset]
-	JumpIfNotZero // [code] [jump-offset]
+	ChangeValue   // [code] [offset] [amount]
 	SetValue      // [code] [offset] [amount]
+	JumpIfZero    // [code] [offset] [jump-offset]
+	JumpIfNotZero // [code] [offset] [jump-offset]
 )

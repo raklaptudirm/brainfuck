@@ -48,19 +48,6 @@ func (v *Value) MemOffset() int {
 	return v.Offset
 }
 
-// Pointer instruction changes the pointer by X.
-type Pointer struct {
-	X int
-}
-
-func (p *Pointer) Instruction() string {
-	return fmt.Sprintf("Change Pointer by %d", p.X)
-}
-
-func (p *Pointer) MemOffset() int {
-	return p.X
-}
-
 // Input instruction takes a single byte as input from the user and stores
 // it in the cell at the given offset from the current cell.
 type Input struct {
@@ -104,10 +91,12 @@ func (s *StartLoop) MemOffset() int {
 }
 
 // EndLoop instruction signals the end of a loop.
-type EndLoop struct{}
+type EndLoop struct {
+	Offset int
+}
 
 func (e *EndLoop) Instruction() string {
-	return "End Loop"
+	return fmt.Sprintf("End Loop at %d", e.Offset)
 }
 
 func (e *EndLoop) MemOffset() int {

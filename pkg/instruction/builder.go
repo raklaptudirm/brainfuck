@@ -92,12 +92,6 @@ func (c *ChunkBuilder) EndLoop() {
 		panic("chunk builder: unexpected *EndLoop")
 	}
 
-	// reset offset, emit a pointer instruction if offset is not zero
-	if c.offset != 0 {
-		c.push(&Pointer{X: c.offset})
-		c.offset = 0
-	}
-
 	last := len(c.loopStack) - 1     // last index of loopStack
 	start := c.loopStack[last]       // last element of loopStack
 	c.loopStack = c.loopStack[:last] // remove last element
@@ -113,7 +107,7 @@ func (c *ChunkBuilder) EndLoop() {
 	}
 
 	// check if the loop body can be optimized
-	if i, ok := optimizeLoopBody(body, offset); ok {
+	if i, ok := optimizeLoopBody(body, offset, c.offset); ok {
 		c.ins = c.ins[:start] // remove loop body
 		c.put(i...)           // put optimized code
 
@@ -123,7 +117,8 @@ func (c *ChunkBuilder) EndLoop() {
 	}
 
 	// optimization failed, standard loop
-	c.push(&EndLoop{})
+	c.push(&EndLoop{Offset: c.offset})
+	c.offset = 0
 }
 
 // isRedundantLoop checks if a loop starting at the given position in the
@@ -239,18 +234,21 @@ func (c *ChunkBuilder) push(i ...Instruction) {
 // optimizeLoopBody tries to optimize the given instructions which were
 // found inside a loop. If successful, it returns the optimized
 // instructions and true, other wise it returns nil and false.
-func optimizeLoopBody(i []Instruction, offset int) ([]Instruction, bool) {
-	switch len(i) {
-	case 0:
-		// empty loop
-	case 1:
-		// repeated changes to the value will just
-		// loop until the current cell becomes 0
-		if _, ok := i[0].(*Value); ok {
-			return []Instruction{&Set{X: 0, Offset: offset}}, true
+func optimizeLoopBody(i []Instruction, start, end int) ([]Instruction, bool) {
+	// any loop that can be optimized has to have a end offset of 0
+	if end == 0 {
+		switch len(i) {
+		case 0:
+			// empty loop
+		case 1:
+			// repeated changes to the value will just
+			// loop until the current cell becomes 0
+			if v, ok := i[0].(*Value); ok {
+				return []Instruction{&Set{X: 0, Offset: start + v.Offset}}, true
+			}
+		default:
+			// TODO: more loop optimizations
 		}
-	default:
-		// TODO: more loop optimizations
 	}
 
 	// no optimizations found
