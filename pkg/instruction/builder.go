@@ -106,9 +106,9 @@ func (c *ChunkBuilder) EndLoop() {
 	offset := c.ins[start].(*StartLoop).Offset
 
 	// remove loops which are never executed
-	if c.isRedundantLoop(start) {
-		c.ins = nil       // clear instruction slice
-		c.offset = offset // reset current offset
+	if c.isRedundantLoop(start, offset) {
+		c.ins = c.ins[:start] // clear instruction slice
+		c.offset = offset     // reset current offset
 		return
 	}
 
@@ -133,15 +133,15 @@ func (c *ChunkBuilder) EndLoop() {
 // are 0 by default. Loops which start right after the end of another loop
 // or a Clear instruction are redundant as the previous loop only exits
 // when the cell is zero.
-func (c *ChunkBuilder) isRedundantLoop(pos int) bool {
+func (c *ChunkBuilder) isRedundantLoop(pos, offset int) bool {
 	if pos == 0 {
 		return true
 	}
 
-	switch c.ins[pos-1].(type) {
+	switch v := c.ins[pos-1].(type) {
 	case *Clear, *EndLoop:
-		// starts right after a loop
-		return true
+		// if offsets are equal, loop is redundant
+		return v.MemOffset() == offset
 	default:
 		return false
 	}
