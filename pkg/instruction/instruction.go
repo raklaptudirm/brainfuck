@@ -40,11 +40,11 @@ type Value struct {
 	Offset int
 }
 
-func (v *Value) Instruction() string {
+func (v Value) Instruction() string {
 	return fmt.Sprintf("Change Value at %d by %d", v.Offset, int8(v.X))
 }
 
-func (v *Value) MemOffset() int {
+func (v Value) MemOffset() int {
 	return v.Offset
 }
 
@@ -54,11 +54,11 @@ type Input struct {
 	Offset int
 }
 
-func (i *Input) Instruction() string {
+func (i Input) Instruction() string {
 	return fmt.Sprintf("Input Byte at %d", i.Offset)
 }
 
-func (i *Input) MemOffset() int {
+func (i Input) MemOffset() int {
 	return i.Offset
 }
 
@@ -68,11 +68,11 @@ type Output struct {
 	Offset int
 }
 
-func (o *Output) Instruction() string {
+func (o Output) Instruction() string {
 	return fmt.Sprintf("Output Byte at %d", o.Offset)
 }
 
-func (o *Output) MemOffset() int {
+func (o Output) MemOffset() int {
 	return o.Offset
 }
 
@@ -82,11 +82,11 @@ type StartLoop struct {
 	Offset int
 }
 
-func (s *StartLoop) Instruction() string {
+func (s StartLoop) Instruction() string {
 	return fmt.Sprintf("Start Loop at %d", s.Offset)
 }
 
-func (s *StartLoop) MemOffset() int {
+func (s StartLoop) MemOffset() int {
 	return s.Offset
 }
 
@@ -95,11 +95,11 @@ type EndLoop struct {
 	Offset int
 }
 
-func (e *EndLoop) Instruction() string {
+func (e EndLoop) Instruction() string {
 	return fmt.Sprintf("End Loop at %d", e.Offset)
 }
 
-func (e *EndLoop) MemOffset() int {
+func (e EndLoop) MemOffset() int {
 	return 0
 }
 
@@ -110,10 +110,10 @@ type Set struct {
 	Offset int
 }
 
-func (c *Set) Instruction() string {
+func (c Set) Instruction() string {
 	return fmt.Sprintf("Set %d at %d", c.X, c.Offset)
 }
 
-func (c *Set) MemOffset() int {
+func (c Set) MemOffset() int {
 	return c.Offset
 }
