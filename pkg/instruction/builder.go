@@ -139,7 +139,7 @@ func (c *ChunkBuilder) isRedundantLoop(pos, offset int) bool {
 	}
 
 	switch v := c.ins[pos-1].(type) {
-	case *Clear, *EndLoop:
+	case *Set, *EndLoop:
 		// if offsets are equal, loop is redundant
 		return v.MemOffset() == offset
 	default:
@@ -192,25 +192,31 @@ func (c *ChunkBuilder) optimizedPush(i Instruction) {
 			return
 		}
 
-		// if last instruction is also a Value, merge with it
-		if prev, ok := c.last().(*Value); ok && prev.Offset == curr.Offset {
-			c.pop()
-
-			if t := prev.X + curr.X; t == 0 {
-				// X = 0
-				return
-			} else {
-				// will be pushed by final push
-				i = &Value{X: t, Offset: curr.Offset}
-			}
+		if c.last() != nil && c.last().MemOffset() != curr.MemOffset() {
+			break
 		}
 
-	case *Clear, *Input:
+		switch prev := c.last().(type) {
+		case *Value:
+			if t := prev.X + curr.X; t == 0 {
+				c.pop()
+			} else {
+				prev.X = t
+			}
+
+			return
+
+		case *Set:
+			prev.X += curr.X
+			return
+		}
+
+	case *Set, *Input:
 		// Clear and Input instructions make any adjacent Value, Clear, or Input
 		// instructions redundant
-		switch v := c.last().(type) {
-		case *Value, *Clear, *Input:
-			if v.MemOffset() == curr.MemOffset() {
+		switch prev := c.last().(type) {
+		case *Value, *Set, *Input:
+			if prev.MemOffset() == curr.MemOffset() {
 				c.pop()
 			}
 		}
@@ -235,7 +241,7 @@ func optimizeLoopBody(i []Instruction, offset int) ([]Instruction, bool) {
 		// repeated changes to the value will just
 		// loop until the current cell becomes 0
 		if _, ok := i[0].(*Value); ok {
-			return []Instruction{&Clear{Offset: offset}}, true
+			return []Instruction{&Set{X: 0, Offset: offset}}, true
 		}
 	default:
 		// TODO: more loop optimizations

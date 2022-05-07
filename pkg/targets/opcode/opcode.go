@@ -29,5 +29,5 @@ const (
 	OutputByte    // [code] [offset]
 	JumpIfZero    // [code] [offset] [jump-offset]
 	JumpIfNotZero // [code] [jump-offset]
-	ClearValue    // [code] [offset]
+	SetValue      // [code] [offset] [amount]
 )

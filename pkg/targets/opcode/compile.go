@@ -70,9 +70,9 @@ func Compile(c *instruction.Chunk) []int {
 			// backpatch jump-offsets
 			dst[len(dst)-1], dst[start-1] = diff, diff
 
-		case *instruction.Clear:
-			// [code] [offset]
-			dst = append(dst, int(ClearValue), v.Offset)
+		case *instruction.Set:
+			// [code] [offset] [amount]
+			dst = append(dst, int(SetValue), v.Offset, int(v.X))
 
 		default:
 			// unreachable

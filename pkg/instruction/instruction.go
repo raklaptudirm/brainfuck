@@ -114,15 +114,17 @@ func (e *EndLoop) MemOffset() int {
 	return 0
 }
 
-// Clear clears value of the cell at the given offset from the current cell.
-type Clear struct {
+// Set sets value of the cell at the given offset from the current cell to
+// the given value.
+type Set struct {
+	X      byte
 	Offset int
 }
 
-func (c *Clear) Instruction() string {
-	return fmt.Sprintf("Clear at %d", c.Offset)
+func (c *Set) Instruction() string {
+	return fmt.Sprintf("Set %d at %d", c.X, c.Offset)
 }
 
-func (c *Clear) MemOffset() int {
+func (c *Set) MemOffset() int {
 	return c.Offset
 }

@@ -78,10 +78,14 @@ func Run(oc []int) {
 				i -= jump
 			}
 
-		case ClearValue:
+		case SetValue:
 			i++                          // update instruction pointer
 			pointer := v.pointer + oc[i] // calculate pointer offset
-			v.memory[pointer] = 0        // clear current cell
+
+			i++                  // update instruction pointer
+			value := byte(oc[i]) // get set value
+
+			v.memory[pointer] = value // clear current cell
 
 		default:
 			panic(fmt.Sprintf("opcode: run: invalid opcode %x", uint(oc[i])))
