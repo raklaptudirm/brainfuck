@@ -16,7 +16,7 @@
 //
 // Implementations can compile this intermediate code to any compilation
 // target. All conforming processes must properly handle all instructions
-// defined in this package, and reject any others. The interpretetion of
+// defined in this package, and reject any others. The interpretation of
 // an instruction must also follow it's definition.
 //
 // Since an instruction chunk can only be created by the builder,
