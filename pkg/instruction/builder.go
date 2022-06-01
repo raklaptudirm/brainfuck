@@ -129,14 +129,20 @@ func (c *ChunkBuilder) EndLoop() {
 // or a Clear instruction are redundant as the previous loop only exits
 // when the cell is zero.
 func (c *ChunkBuilder) isRedundantLoop(pos, offset int) bool {
-	if pos == 0 {
+	ins := c.ins[pos-1]
+
+	switch {
+	case pos == 0:
 		return true
+	case ins.MemOffset() != offset:
+		return false
 	}
 
-	switch v := c.ins[pos-1].(type) {
-	case Set, EndLoop:
-		// if offsets are equal, loop is redundant
-		return v.MemOffset() == offset
+	switch v := ins.(type) {
+	case Set:
+		return v.X == 0
+	case EndLoop:
+		return true
 	default:
 		return false
 	}
