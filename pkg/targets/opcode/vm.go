@@ -43,10 +43,6 @@ func Run(oc []int) {
 			v.memory[pointer] += byte(oc[i+2]) // change value by amount
 			i += 2                             // update instruction pointer
 
-		case ChangePointer:
-			i++                // update instruction pointer
-			v.pointer += oc[i] // update memory pointer
-
 		case InputByte:
 			i++                                 // update instruction pointer
 			pointer := v.pointer + oc[i]        // calculate pointer offset
@@ -70,6 +66,9 @@ func Run(oc []int) {
 			}
 
 		case JumpIfNotZero:
+			i++                // update instruction pointer
+			v.pointer += oc[i] // change pointer by offset
+
 			i++           // update instruction pointer
 			jump := oc[i] // get jump offset
 
@@ -78,10 +77,14 @@ func Run(oc []int) {
 				i -= jump
 			}
 
-		case ClearValue:
+		case SetValue:
 			i++                          // update instruction pointer
 			pointer := v.pointer + oc[i] // calculate pointer offset
-			v.memory[pointer] = 0        // clear current cell
+
+			i++                  // update instruction pointer
+			value := byte(oc[i]) // get set value
+
+			v.memory[pointer] = value // clear current cell
 
 		default:
 			panic(fmt.Sprintf("opcode: run: invalid opcode %x", uint(oc[i])))

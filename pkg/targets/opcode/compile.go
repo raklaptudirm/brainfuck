@@ -31,35 +31,31 @@ func Compile(c *instruction.Chunk) []int {
 		ins := c.Instruction(i)
 
 		switch v := ins.(type) {
-		case *instruction.Value:
+		case instruction.Value:
 			// [code] [offset] [amount]
 			dst = append(dst, int(ChangeValue), v.Offset, int(v.X))
 
-		case *instruction.Pointer:
-			// [code] [amount]
-			dst = append(dst, int(ChangePointer), v.X)
-
-		case *instruction.Input:
+		case instruction.Input:
 			// [code] [offset]
 			dst = append(dst, int(InputByte), v.Offset)
 
-		case *instruction.Output:
+		case instruction.Output:
 			// [code] [offset]
 			dst = append(dst, int(OutputByte), v.Offset)
 
-		case *instruction.StartLoop:
+		case instruction.StartLoop:
 			// [code] [offset] [jump-offset]
 			dst = append(dst, int(JumpIfZero), v.Offset, 0)
 			stack = append(stack, len(dst))
 
-		case *instruction.EndLoop:
+		case instruction.EndLoop:
 			if len(stack) == 0 {
 				// no loops opened, unreachable
-				panic("opcode: compile: unexpected *EndLoop instruction in chunk")
+				panic("opcode: compile: unexpected EndLoop instruction in chunk")
 			}
 
-			// [code] [jump-offset]
-			dst = append(dst, int(JumpIfNotZero), 0)
+			// [code] [offset] [jump-offset]
+			dst = append(dst, int(JumpIfNotZero), v.Offset, 0)
 
 			start := stack[len(stack)-1] // get loop start index
 			stack = stack[:len(stack)-1] // pop loop index
@@ -70,9 +66,9 @@ func Compile(c *instruction.Chunk) []int {
 			// backpatch jump-offsets
 			dst[len(dst)-1], dst[start-1] = diff, diff
 
-		case *instruction.Clear:
-			// [code] [offset]
-			dst = append(dst, int(ClearValue), v.Offset)
+		case instruction.Set:
+			// [code] [offset] [amount]
+			dst = append(dst, int(SetValue), v.Offset, int(v.X))
 
 		default:
 			// unreachable
@@ -83,7 +79,7 @@ func Compile(c *instruction.Chunk) []int {
 
 	if len(stack) > 0 {
 		// unclosed loops, unreachable
-		panic("opcode: compile: unexpected end of chunk, unpaired *StartLoop instructions")
+		panic("opcode: compile: unexpected end of chunk, unpaired StartLoop instructions")
 	}
 
 	return dst

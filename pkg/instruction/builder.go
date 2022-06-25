@@ -45,11 +45,11 @@ func (c *ChunkBuilder) CanFinalize() bool {
 	return len(c.loopStack) == 0
 }
 
-// ChangeValue is a helper function for adding a *Value instruction to the
+// ChangeValue is a helper function for adding a Value instruction to the
 // chunk, with the current offsets in mind.
 func (c *ChunkBuilder) ChangeValue(by int8) {
 	c.assertNotFinalized() // make sure chunk is not finalized
-	c.optimizedPush(&Value{X: byte(by), Offset: c.offset})
+	c.optimizedPush(Value{X: byte(by), Offset: c.offset})
 }
 
 // ChangePointer is a helper function which represents adding a pointer
@@ -59,43 +59,37 @@ func (c *ChunkBuilder) ChangePointer(change int) {
 	c.offset += change
 }
 
-// InputByte is a helper function for adding a *Input instruction to the
+// InputByte is a helper function for adding a Input instruction to the
 // chunk, with the current offsets in mind.
 func (c *ChunkBuilder) InputByte() {
 	c.assertNotFinalized() // make sure chunk is not finalized
-	c.push(&Input{Offset: c.offset})
+	c.optimizedPush(Input{Offset: c.offset})
 }
 
-// OutputByte is a helper function for adding a *Output instruction to the
+// OutputByte is a helper function for adding a Output instruction to the
 // chunk, with the current offsets in mind.
 func (c *ChunkBuilder) OutputByte() {
 	c.assertNotFinalized() // make sure chunk is not finalized
-	c.push(&Output{Offset: c.offset})
+	c.push(Output{Offset: c.offset})
 }
 
-// StartLoop is a helper function for adding a *StartLoop instruction to
+// StartLoop is a helper function for adding a StartLoop instruction to
 // the chunk, with the current offsets in mind.
 func (c *ChunkBuilder) StartLoop() {
 	c.assertNotFinalized() // make sure chunk is not finalized
 
 	c.loopStack = append(c.loopStack, len(c.ins)) // add to loop stack
-	c.push(&StartLoop{Offset: c.offset})          // push start loop
+	c.push(StartLoop{Offset: c.offset})           // push start loop
 	c.offset = 0                                  // reset offset count
 }
 
-// EndLoop is a helper function which encapsulates adding a *EndLoop
+// EndLoop is a helper function which encapsulates adding a EndLoop
 // instruction to the chunk.
 func (c *ChunkBuilder) EndLoop() {
 	c.assertNotFinalized() // make sure chunk is not finalized
 
 	if len(c.loopStack) == 0 {
-		panic("chunk builder: unexpected *EndLoop")
-	}
-
-	// reset offset, emit a pointer instruction if offset is not zero
-	if c.offset != 0 {
-		c.push(&Pointer{X: c.offset})
-		c.offset = 0
+		panic("chunk builder: unexpected EndLoop")
 	}
 
 	last := len(c.loopStack) - 1     // last index of loopStack
@@ -103,17 +97,17 @@ func (c *ChunkBuilder) EndLoop() {
 	c.loopStack = c.loopStack[:last] // remove last element
 
 	body := c.ins[start+1:]
-	offset := c.ins[start].(*StartLoop).Offset
+	offset := c.ins[start].MemOffset()
 
-	// ignore initial comment loops
-	if start == 0 {
-		c.ins = nil       // clear instruction slice
-		c.offset = offset // reset current offset
+	// remove loops which are never executed
+	if c.isRedundantLoop(start, offset) {
+		c.ins = c.ins[:start] // clear instruction slice
+		c.offset = offset     // reset current offset
 		return
 	}
 
 	// check if the loop body can be optimized
-	if i, ok := optimizeLoopBody(body, offset); ok {
+	if i, ok := optimizeLoopBody(body, offset, c.offset); ok {
 		c.ins = c.ins[:start] // remove loop body
 		c.put(i...)           // put optimized code
 
@@ -123,7 +117,35 @@ func (c *ChunkBuilder) EndLoop() {
 	}
 
 	// optimization failed, standard loop
-	c.push(&EndLoop{})
+	c.push(EndLoop{Offset: c.offset})
+	c.offset = 0
+}
+
+// isRedundantLoop checks if a loop starting at the given position in the
+// instruction chunk is redundant or not.
+//
+// Loops which are before any other instruction are redundant as all cells
+// are 0 by default. Loops which start right after the end of another loop
+// or a Clear instruction are redundant as the previous loop only exits
+// when the cell is zero.
+func (c *ChunkBuilder) isRedundantLoop(pos, offset int) bool {
+	ins := c.ins[pos-1]
+
+	switch {
+	case pos == 0:
+		return true
+	case ins.MemOffset() != offset:
+		return false
+	}
+
+	switch v := ins.(type) {
+	case Set:
+		return v.X == 0
+	case EndLoop:
+		return true
+	default:
+		return false
+	}
 }
 
 // assertNotFinalized makes sure that the chunk has not been finalized, and
@@ -164,38 +186,43 @@ func (c *ChunkBuilder) put(is ...Instruction) {
 // This function should not be exposed to external processes as some function
 // calls may lead to unexpected results.
 func (c *ChunkBuilder) optimizedPush(i Instruction) {
-	switch curr := i.(type) {
-	case *Value:
-		if curr.X == 0 {
-			// Value instructions with X = 0 are redundant
-			return
-		}
 
-		// if last instruction is also a Value, merge with it
-		if prev, ok := c.last().(*Value); ok && prev.Offset == curr.Offset {
-			c.pop()
-
-			if t := prev.X + curr.X; t == 0 {
-				// X = 0
+	// optimizations can only happen if the offsets are the same
+	if c.last() != nil && c.last().MemOffset() == i.MemOffset() {
+		switch curr := i.(type) {
+		case Value:
+			if curr.X == 0 {
+				// Value instructions with X = 0 are redundant
 				return
-			} else {
-				// will be pushed by final push
-				i = &Value{X: t, Offset: curr.Offset}
 			}
-		}
+			switch prev := c.last().(type) {
+			// merge multiple Value instructions into a single one
+			case Value:
+				c.pop()
+				if t := prev.X + curr.X; t != 0 {
+					c.push(Value{X: t, Offset: curr.MemOffset()})
+				}
 
-	case *Clear:
-		// Clear instruction makes any adjacent Value instructions redundant
-		if prev, ok := c.last().(*Value); ok && prev.Offset == curr.Offset {
-			c.pop()
-		}
+				return
 
-		// multiple Clear instructions are redundant
-		if prev, ok := c.last().(*Clear); ok && prev.Offset == curr.Offset {
-			return
+			// merge Value instructions into the Set instruction
+			case Set:
+				c.pop()
+				c.push(Set{X: prev.X + curr.X, Offset: curr.MemOffset()})
+				return
+			}
+
+		case Set, Input:
+			// Clear and Input instructions make any adjacent Value, Clear, or Input
+			// instructions redundant
+			switch c.last().(type) {
+			case Value, Set, Input:
+				c.pop()
+			}
 		}
 	}
 
+	// push instruction into chunk
 	c.push(i)
 }
 
@@ -207,18 +234,21 @@ func (c *ChunkBuilder) push(i ...Instruction) {
 // optimizeLoopBody tries to optimize the given instructions which were
 // found inside a loop. If successful, it returns the optimized
 // instructions and true, other wise it returns nil and false.
-func optimizeLoopBody(i []Instruction, offset int) ([]Instruction, bool) {
-	switch len(i) {
-	case 0:
-		// empty loop
-	case 1:
-		// repeated changes to the value will just
-		// loop until the current cell becomes 0
-		if _, ok := i[0].(*Value); ok {
-			return []Instruction{&Clear{Offset: offset}}, true
+func optimizeLoopBody(i []Instruction, start, end int) ([]Instruction, bool) {
+	// any loop that can be optimized has to have a end offset of 0
+	if end == 0 {
+		switch len(i) {
+		case 0:
+			// empty loop
+		case 1:
+			// repeated changes to the value will just
+			// loop until the current cell becomes 0
+			if v, ok := i[0].(Value); ok {
+				return []Instruction{Set{X: 0, Offset: start + v.Offset}}, true
+			}
+		default:
+			// TODO: more loop optimizations
 		}
-	default:
-		// TODO: more loop optimizations
 	}
 
 	// no optimizations found
