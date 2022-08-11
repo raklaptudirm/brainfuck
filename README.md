@@ -15,9 +15,7 @@ programming language.
 ### Installation
 
 ```
-git clone https://github.com/raklaptudirm/brainfuck.git
-cd brainfuck
-go build ./cmd/brainfuck
+go install laptudirm.com/x/brainfuck/cmd/brainfuck@latest
 ```
 
 ### Usage
