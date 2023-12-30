@@ -8,7 +8,7 @@ programming language.
 > is missing.
 
 <div align="center">
-  <img src="https://user-images.githubusercontent.com/68542775/175783619-bc3e723a-0540-4062-8e6b-cd96fd2b7525.PNG" alt="mandelbrot">
+  <img src="https://user-images.githubusercontent.com/68542775/175783619-bc3e723a-0540-4062-8e6b-cd96fd2b7525.PNG" alt="ASCII Mandelbrot Set">
 </div>
 
 
